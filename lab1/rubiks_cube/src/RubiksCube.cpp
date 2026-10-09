@@ -46,3 +46,11 @@
 
          return faces_[faceIndex][cellIndex];
      }
+
+     bool RubiksCube::operator==(const RubiksCube& other) const {
+          return faces_ == other.faces_;
+      }
+
+      bool RubiksCube::operator!=(const RubiksCube& other) const {
+          return !(*this == other);
+      }
