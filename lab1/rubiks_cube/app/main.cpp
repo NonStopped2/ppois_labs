@@ -1,6 +1,12 @@
-#include <iostream>
+ #include "RubiksCube.hpp"
 
-int main() {
-  std::cout << "Rubik's Cube\n";
-  return 0;
-}
+   #include <iostream>
+
+   int main() {
+       RubiksCube cube;
+       const bool solved = cube.isSolved();
+
+       std::cout << "Cube is solved: " << std::boolalpha << solved << '\n';
+
+       return 0;
+   }
