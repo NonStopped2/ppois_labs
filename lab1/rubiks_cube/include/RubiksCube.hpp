@@ -29,6 +29,14 @@ enum class Face {
          /** @brief Проверяет, одноцветна ли каждая грань. */
          bool isSolved() const;
 
+         /** @brief Возвращает цвет клетки по грани, строке и столбцу.
+           *  @param face Грань кубика.
+           *  @param row Строка от 0 до 2.
+           *  @param column Столбец от 0 до 2.
+           *  @throws std::out_of_range Если грань или координаты недопустимы.
+           */
+          Color colorAt(Face face, std::size_t row, std::size_t column) const;
+
      private:
          static constexpr std::size_t kFaceCount = 6;
          static constexpr std::size_t kSideLength = 3;
