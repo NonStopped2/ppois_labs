@@ -37,13 +37,21 @@ enum class Face {
            */
           Color colorAt(Face face, std::size_t row, std::size_t column) const;
 
-          /** @brief Проверяет совпадение цветов всех соответствующих клеток. */
-             bool operator==(const RubiksCube& other) const;
+        /** @brief Проверяет совпадение цветов всех соответствующих клеток. */
+        bool operator==(const RubiksCube& other) const;
 
-             /** @brief Проверяет, различаются ли состояния кубиков. */
-             bool operator!=(const RubiksCube& other) const;
+        /** @brief Проверяет, различаются ли состояния кубиков. */
+        bool operator!=(const RubiksCube& other) const;
+
+        /** @brief Поворачивает переднюю грань по часовой стрелке
+        *  при взгляде прямо на неё.
+        */
+        void rotateFront();
+
 
      private:
+         void rotateFaceClockwise(Face face);
+
          static constexpr std::size_t kFaceCount = 6;
          static constexpr std::size_t kSideLength = 3;
          static constexpr std::size_t kCellsPerFace =

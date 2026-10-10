@@ -54,3 +54,45 @@
       bool RubiksCube::operator!=(const RubiksCube& other) const {
           return !(*this == other);
       }
+
+      void RubiksCube::rotateFaceClockwise(Face face) {
+             const std::size_t faceIndex = static_cast<std::size_t>(face);
+             const auto previousFace = faces_[faceIndex];
+
+             for (std::size_t row = 0; row < kSideLength; ++row) {
+                 for (std::size_t column = 0; column < kSideLength; ++column) {
+                     const std::size_t oldIndex = row * kSideLength + column;
+                     const std::size_t newRow = column;
+                     const std::size_t newColumn = kSideLength - 1 - row;
+                     const std::size_t newIndex = newRow * kSideLength + newColumn;
+
+                     faces_[faceIndex][newIndex] = previousFace[oldIndex];
+                 }
+             }
+         }
+
+         void RubiksCube::rotateFront() {
+               rotateFaceClockwise(Face::Front);
+
+               auto& upperFace = faces_[static_cast<std::size_t>(Face::Up)];
+               auto& rightFace = faces_[static_cast<std::size_t>(Face::Right)];
+               auto& lowerFace = faces_[static_cast<std::size_t>(Face::Down)];
+               auto& leftFace = faces_[static_cast<std::size_t>(Face::Left)];
+
+               const std::size_t lastCoordinate = kSideLength - 1;
+
+               for (std::size_t offset = 0; offset < kSideLength; ++offset) {
+                   const std::size_t upperIndex = lastCoordinate * kSideLength + offset;
+                   const std::size_t rightIndex = offset * kSideLength;
+                   const std::size_t lowerIndex = lastCoordinate - offset;
+                   const std::size_t leftIndex =
+                       (lastCoordinate - offset) * kSideLength + lastCoordinate;
+
+                   const Color previousUpperColor = upperFace[upperIndex];
+
+                   upperFace[upperIndex] = leftFace[leftIndex];
+                   leftFace[leftIndex] = lowerFace[lowerIndex];
+                   lowerFace[lowerIndex] = rightFace[rightIndex];
+                   rightFace[rightIndex] = previousUpperColor;
+               }
+           }

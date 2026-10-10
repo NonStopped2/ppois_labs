@@ -1,29 +1,34 @@
-#include "RubiksCube.hpp"
+ #include "RubiksCube.hpp"
 
    #include <iostream>
 
    int main() {
+       constexpr std::size_t kQuarterTurnsPerCycle = 4;
+
        RubiksCube cube;
-       RubiksCube copiedCube(cube);
+       const RubiksCube originalCube(cube);
 
-       RubiksCube assignedCube;
-       assignedCube = cube;
+       cube.rotateFront();
 
-       const bool solved = cube.isSolved();
+       const bool solvedAfterTurn = cube.isSolved();
+       const bool equalsOriginalAfterTurn = cube == originalCube;
 
-       const Color topLeftColor = cube.colorAt(Face::Up, 0, 0);
-       const bool topLeftIsWhite = topLeftColor == Color::White;
-
-       const bool copyEqualsOriginal = copiedCube == cube;
-       const bool copyDiffersFromOriginal = copiedCube != cube;
-       const bool assignedEqualsOriginal = assignedCube == cube;
+       const Color upperBottomLeftColor = cube.colorAt(Face::Up, 2, 0);
+       const bool upperCellIsOrange = upperBottomLeftColor == Color::Orange;
 
        std::cout << std::boolalpha;
-       std::cout << "Cube is solved: " << solved << '\n';
-       std::cout << "Top-left cell is white: " << topLeftIsWhite << '\n';
-       std::cout << "Copy equals original: " << copyEqualsOriginal << '\n';
-       std::cout << "Copy differs from original: " << copyDiffersFromOriginal << '\n';
-       std::cout << "Assigned cube equals original: " << assignedEqualsOriginal << '\n';
+       std::cout << "Solved after one turn: " << solvedAfterTurn << '\n';
+       std::cout << "Equals original after one turn: "
+                 << equalsOriginalAfterTurn << '\n';
+       std::cout << "Upper bottom-left cell is orange: "
+                 << upperCellIsOrange << '\n';
+
+       for (std::size_t turn = 1; turn < kQuarterTurnsPerCycle; ++turn) {
+           cube.rotateFront();
+       }
+
+       const bool restored = cube == originalCube;
+       std::cout << "Restored after four turns: " << restored << '\n';
 
        return 0;
    }
