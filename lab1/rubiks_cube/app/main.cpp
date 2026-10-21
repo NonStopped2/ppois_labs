@@ -1,124 +1,288 @@
 #include "RubiksCube.hpp"
 
-#include <cstdint>
+#include <array>
 #include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 
 namespace {
-constexpr std::size_t kScrambleMoveCount = 30;
-constexpr std::uint32_t kDemoSeed = 42;
-const std::string kWrongCentersState =
-    "W W W W Y W W W W\n"
-    "Y Y Y Y W Y Y Y Y\n"
-    "G G G G G G G G G\n"
-    "B B B B B B B B B\n"
-    "O O O O O O O O O\n"
-    "R R R R R R R R R\n";
+constexpr std::size_t kSideLength = 3;
+constexpr std::size_t kQuarterTurnsPerCycle = 4;
+constexpr std::size_t kMaxScrambleMoves = 10000;
+constexpr std::array<const char *, 6> kFaceNames{
+    "Верхняя (U)", "Нижняя (D)", "Передняя (F)",
+    "Задняя (B)", "Левая (L)", "Правая (R)"};
+constexpr std::array<char, 6> kColorSymbols{'W', 'Y', 'G', 'B', 'O', 'R'};
 
-std::string serialize(const RubiksCube &cube) {
-  std::ostringstream output;
-  output << cube;
-  return output.str();
+enum class MenuCommand { Exit, Show, Rotate, Scramble, Check, Save, Load, Reset };
+
+std::optional<std::string> readLine(const std::string &prompt) {
+  std::cout << prompt;
+  std::string line;
+  if (!std::getline(std::cin, line)) {
+    return std::nullopt;
+  }
+  return line;
 }
 
-void saveCube(const std::filesystem::path &path, const RubiksCube &cube) {
-  if (std::filesystem::exists(path)) {
-    throw std::runtime_error("Demo will not overwrite an existing file");
+std::optional<std::size_t> readNumber(const std::string &prompt,
+                                    std::size_t minimum, std::size_t maximum) {
+  while (const auto line = readLine(prompt)) {
+    std::istringstream parser(*line);
+    long long number{};
+    std::string extra;
+    if ((parser >> number) && !(parser >> extra) &&
+        number >= static_cast<long long>(minimum) &&
+        number <= static_cast<long long>(maximum)) {
+      return static_cast<std::size_t>(number);
+    }
+    std::cout << "Введите целое число от " << minimum << " до " << maximum << ".\n";
   }
+  return std::nullopt;
+}
 
+std::optional<std::filesystem::path> readPath(const std::string &prompt) {
+  while (const auto line = readLine(prompt)) {
+    if (!line->empty()) {
+      return std::filesystem::path(*line);
+    }
+    std::cout << "Путь не должен быть пустым.\n";
+  }
+  return std::nullopt;
+}
+
+void showFaceRow(const RubiksCube &cube, Face face, std::size_t row) {
+  for (std::size_t column = 0; column < kSideLength; ++column) {
+    const Color color = cube.colorAt(face, row, column);
+    std::cout << kColorSymbols.at(static_cast<std::size_t>(color)) << ' ';
+  }
+  std::cout << '\n';
+}
+
+void showCube(const RubiksCube &cube) {
+  std::cout << '\n';
+  for (std::size_t faceIndex = 0; faceIndex < kFaceNames.size(); ++faceIndex) {
+    std::cout << kFaceNames[faceIndex] << ":\n";
+    const Face face = static_cast<Face>(faceIndex);
+    for (std::size_t row = 0; row < kSideLength; ++row) {
+      showFaceRow(cube, face, row);
+    }
+    std::cout << '\n';
+  }
+}
+
+void showStatus(const RubiksCube &cube) {
+  std::cout << (cube.isSolved() ? "Кубик собран.\n" : "Кубик ещё не собран.\n");
+}
+
+void showFaceChoices() {
+  for (std::size_t faceIndex = 0; faceIndex < kFaceNames.size(); ++faceIndex) {
+    std::cout << faceIndex + 1 << ". " << kFaceNames[faceIndex] << '\n';
+  }
+}
+
+void showMenu() {
+  std::cout << "\n=== Кубик Рубика ===\n"
+               "1. Показать кубик\n"
+               "2. Повернуть грань\n"
+               "3. Перемешать\n"
+               "4. Проверить, собран ли кубик\n"
+               "5. Сохранить в файл\n"
+               "6. Загрузить из файла\n"
+               "7. Начать заново\n"
+               "0. Выход\n";
+}
+
+std::optional<Face> readFace() {
+  showFaceChoices();
+  const auto choice = readNumber("Грань: ", 1, kFaceNames.size());
+  if (!choice) {
+    return std::nullopt;
+  }
+  return static_cast<Face>(*choice - 1);
+}
+
+std::optional<std::size_t> readTurnCount() {
+  std::cout << "Направление при взгляде прямо на выбранную грань:\n"
+               "1. По часовой стрелке\n2. Против часовой стрелки\n";
+  const auto direction = readNumber("Направление: ", 1, 2);
+  if (!direction) {
+    return std::nullopt;
+  }
+  return *direction == 1 ? 1 : kQuarterTurnsPerCycle - 1;
+}
+
+bool rotateCube(RubiksCube &cube) {
+  const auto face = readFace();
+  if (!face) {
+    return false;
+  }
+  const auto turns = readTurnCount();
+  if (!turns) {
+    return false;
+  }
+  for (std::size_t turn = 0; turn < *turns; ++turn) {
+    cube.rotate(*face);
+  }
+  showCube(cube);
+  showStatus(cube);
+  return true;
+}
+
+bool scrambleCube(RubiksCube &cube) {
+  const auto moves = readNumber("Количество поворотов: ", 0, kMaxScrambleMoves);
+  if (!moves) {
+    return false;
+  }
+  cube.scramble(*moves);
+  std::cout << "Выполнено случайных поворотов: " << *moves << ".\n";
+  showCube(cube);
+  showStatus(cube);
+  return true;
+}
+
+void writeCube(const std::filesystem::path &path, const RubiksCube &cube) {
   std::ofstream output(path);
   if (!output) {
-    throw std::runtime_error("Cannot open cube file for writing");
+    throw std::runtime_error("Не удалось открыть файл для записи");
   }
-
   output << cube;
   output.close();
   if (!output) {
-    throw std::runtime_error("Cannot write cube state");
+    throw std::runtime_error("Не удалось записать состояние кубика");
   }
 }
 
 RubiksCube loadCube(const std::filesystem::path &path) {
   std::ifstream input(path);
+  if (!input) {
+    throw std::runtime_error("Не удалось открыть файл для чтения");
+  }
   RubiksCube cube;
   if (!(input >> cube)) {
-    throw std::runtime_error("Cannot read a valid cube state from file");
+    throw std::runtime_error("Некорректное состояние кубика в файле");
   }
-
   input >> std::ws;
   if (input.bad() || !input.eof()) {
-    throw std::runtime_error("Unexpected data after cube state");
+    throw std::runtime_error("После состояния кубика найдены лишние данные");
   }
-
   return cube;
 }
 
-bool demonstrateFileRoundTrip(const RubiksCube &originalCube,
-                              const std::filesystem::path &path) {
-  saveCube(path, originalCube);
-  const RubiksCube loadedCube = loadCube(path);
-  const bool restored = loadedCube == originalCube;
-
-  std::cout << "Saved cube file: " << path << '\n';
-  std::cout << "File round-trip preserves state: " << restored << '\n';
-  return restored;
+std::optional<bool> confirmOverwrite(const std::filesystem::path &path) {
+  if (!std::filesystem::exists(path)) {
+    return true;
+  }
+  if (!std::filesystem::is_regular_file(path)) {
+    throw std::runtime_error("Указанный путь не является обычным файлом");
+  }
+  const auto answer = readNumber("Файл существует. Перезаписать? 1 — да, 0 — нет: ", 0, 1);
+  if (!answer) {
+    return std::nullopt;
+  }
+  return *answer == 1;
 }
 
-bool demonstrateRejectedInput(const std::string &name, const std::string &text,
-                              const RubiksCube &originalCube) {
-  RubiksCube cube(originalCube);
-  std::istringstream input(text);
-  input >> cube;
-
-  const bool rejected = input.fail();
-  const bool preserved = cube == originalCube;
-  std::cout << name << ": rejected=" << rejected
-            << ", original preserved=" << preserved << '\n';
-
-  return rejected && preserved;
+bool saveCube(RubiksCube &cube) {
+  const auto path = readPath("Путь к файлу для сохранения: ");
+  if (!path) {
+    return false;
+  }
+  const auto approved = confirmOverwrite(*path);
+  if (!approved) {
+    return false;
+  }
+  if (!*approved) {
+    std::cout << "Сохранение отменено.\n";
+    return true;
+  }
+  writeCube(*path, cube);
+  std::cout << "Состояние сохранено: " << *path << '\n';
+  return true;
 }
 
-bool demonstrateInvalidInputs(const RubiksCube &originalCube) {
-  const std::string solvedState = serialize(RubiksCube{});
-  std::string unknownSymbol = solvedState;
-  unknownSymbol.front() = 'X';
-  std::string wrongColorCounts = solvedState;
-  wrongColorCounts.front() = 'Y';
+bool loadCubeFromMenu(RubiksCube &cube) {
+  const auto path = readPath("Путь к файлу для загрузки: ");
+  if (!path) {
+    return false;
+  }
+  const RubiksCube loadedCube = loadCube(*path);
+  cube = loadedCube;
+  std::cout << "Состояние загружено.\n";
+  showCube(cube);
+  showStatus(cube);
+  return true;
+}
 
-  const bool unknownRejected =
-      demonstrateRejectedInput("Unknown color", unknownSymbol, originalCube);
-  const bool truncatedRejected = demonstrateRejectedInput(
-      "Truncated state", solvedState.substr(0, solvedState.size() / 2), originalCube);
-  const bool countsRejected =
-      demonstrateRejectedInput("Wrong color counts", wrongColorCounts, originalCube);
-  const bool centersRejected =
-      demonstrateRejectedInput("Wrong centers", kWrongCentersState, originalCube);
+bool resetCube(RubiksCube &cube) {
+  const auto answer = readNumber("Начать заново? 1 — да, 0 — нет: ", 0, 1);
+  if (!answer) {
+    return false;
+  }
+  if (*answer == 1) {
+    cube = RubiksCube{};
+    std::cout << "Начальное состояние восстановлено.\n";
+    showCube(cube);
+  }
+  return true;
+}
 
-  return unknownRejected && truncatedRejected && countsRejected && centersRejected;
+bool executeCommand(MenuCommand command, RubiksCube &cube) {
+  switch (command) {
+  case MenuCommand::Exit: return false;
+  case MenuCommand::Show: showCube(cube); return true;
+  case MenuCommand::Rotate: return rotateCube(cube);
+  case MenuCommand::Scramble: return scrambleCube(cube);
+  case MenuCommand::Check: showStatus(cube); return true;
+  case MenuCommand::Save: return saveCube(cube);
+  case MenuCommand::Load: return loadCubeFromMenu(cube);
+  case MenuCommand::Reset: return resetCube(cube);
+  }
+  throw std::logic_error("Неизвестная команда меню");
+}
+
+void runMenu(RubiksCube &cube) {
+  while (true) {
+    showMenu();
+    const auto choice = readNumber(
+        "Выбор: ", 0, static_cast<std::size_t>(MenuCommand::Reset));
+    if (!choice) {
+      break;
+    }
+    try {
+      if (!executeCommand(static_cast<MenuCommand>(*choice), cube)) {
+        break;
+      }
+    } catch (const std::exception &error) {
+      std::cerr << "Ошибка: " << error.what() << '\n';
+    }
+  }
+  std::cout << "\nРабота завершена.\n";
 }
 } // namespace
 
 int main(int argumentCount, char *arguments[]) {
-  if (argumentCount != 2) {
-    std::cerr << "Usage: " << arguments[0] << " <new-cube-file>\n";
+  if (argumentCount > 2) {
+    std::cerr << "Использование: " << arguments[0] << " [файл кубика]\n";
     return 1;
   }
-
   try {
     RubiksCube cube;
-    cube.scramble(kScrambleMoveCount, kDemoSeed);
-    std::cout << std::boolalpha;
-
-    const bool fileRoundTrip = demonstrateFileRoundTrip(cube, arguments[1]);
-    const bool invalidInputsRejected = demonstrateInvalidInputs(cube);
-    return fileRoundTrip && invalidInputsRejected ? 0 : 1;
+    if (argumentCount == 2) {
+      cube = loadCube(arguments[1]);
+    }
+    std::cout << "Цвета: W — белый, Y — жёлтый, G — зелёный, "
+                 "B — синий, O — оранжевый, R — красный.\n";
+    showCube(cube);
+    runMenu(cube);
+    return 0;
   } catch (const std::exception &error) {
-    std::cerr << "Error: " << error.what() << '\n';
+    std::cerr << "Ошибка: " << error.what() << '\n';
     return 1;
   }
 }
