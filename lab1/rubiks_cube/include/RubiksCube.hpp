@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <iosfwd> //  std::istream и std::ostream без реализации
 
 enum class Color { White, Yellow, Green, Blue, Orange, Red };
 
@@ -52,6 +53,15 @@ public:
      */
     void scramble(std::size_t moveCount, std::uint32_t seed);
 
+    /** @brief Записывает цвета шести граней в текстовый поток. */
+    friend std::ostream& operator<<(std::ostream& output, const RubiksCube& cube);
+
+       /** @brief Читает состояние из потока.
+        *  При некорректных данных устанавливает failbit,
+        *  оставляя исходный кубик неизменным.
+        */
+    friend std::istream& operator>>(std::istream& input, RubiksCube& cube);
+
 private:
   void rotateFaceClockwise(Face face);
 
@@ -60,6 +70,21 @@ private:
   static constexpr std::size_t kCellsPerFace = kSideLength * kSideLength;
 
   static constexpr std::size_t kNeighborCount = 4;
+
+  static constexpr std::size_t kCenterIndex = kCellsPerFace / 2;
+
+    static constexpr std::array<Color, kFaceCount> kSolvedColors{
+        Color::White,
+        Color::Yellow,
+        Color::Green,
+        Color::Blue,
+        Color::Orange,
+        Color::Red
+    };
+
+    static constexpr std::array<char, kFaceCount> kColorSymbols{
+        'W', 'Y', 'G', 'B', 'O', 'R'
+    };
 
   struct NeighborStrip {
     Face face;
@@ -70,6 +95,10 @@ private:
 
   NeighborStrips neighborStripsFor(Face face) const;
   void rotateNeighborStrips(const NeighborStrips &strips);
+
+  static bool tryParseColor(char symbol, Color& color);
+     bool readState(std::istream& input);
+     bool hasValidColors() const;
 
   std::array<std::array<Color, kCellsPerFace>, kFaceCount> faces_{};
 };

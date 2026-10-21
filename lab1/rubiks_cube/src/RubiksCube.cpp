@@ -1,16 +1,14 @@
 #include "RubiksCube.hpp"
 #include <stdexcept>
 #include <random>
+#include <istream>
+#include <ostream>
 
 RubiksCube::RubiksCube() {
-  const std::array<Color, kFaceCount> solvedColors{Color::White,  Color::Yellow,
-                                                   Color::Green,  Color::Blue,
-                                                   Color::Orange, Color::Red};
-
-  for (std::size_t faceIndex = 0; faceIndex < kFaceCount; ++faceIndex) {
-    faces_[faceIndex].fill(solvedColors[faceIndex]);
-  }
-}
+       for (std::size_t faceIndex = 0; faceIndex < kFaceCount; ++faceIndex) {
+           faces_[faceIndex].fill(kSolvedColors[faceIndex]);
+       }
+   }
 
 bool RubiksCube::isSolved() const {
   for (const auto &face : faces_) {
@@ -143,3 +141,87 @@ void RubiksCube::scramble(std::size_t moveCount) {
          rotate(selectedFace);
      }
  }
+
+
+ bool RubiksCube::tryParseColor (char symbol, Color& color){
+
+     for (std::size_t index = 0; index < kColorSymbols.size(); ++index){
+         if (kColorSymbols[index] == symbol){
+             color = static_cast<Color>(index);
+             return true;
+         }
+     }
+     return false;
+ }
+
+ bool RubiksCube::readState(std::istream& input) {
+        for (auto& face : faces_) {
+            for (Color& color : face) {
+                char symbol{};
+
+                if (!(input >> symbol) || !tryParseColor(symbol, color)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+
+    bool RubiksCube::hasValidColors() const {
+          std::array<std::size_t, kFaceCount> colorCounts{};
+
+          for (std::size_t faceIndex = 0; faceIndex < kFaceCount; ++faceIndex) {
+              const auto& face = faces_[faceIndex];
+
+              if (face[kCenterIndex] != kSolvedColors[faceIndex]) {
+                  return false;
+              }
+
+              for (Color color : face) {
+                  ++colorCounts[static_cast<std::size_t>(color)];
+              }
+          }
+
+          for (std::size_t count : colorCounts) {
+              if (count != kCellsPerFace) {
+                  return false;
+              }
+          }
+
+          return true;
+      }
+
+      std::istream& operator>>(std::istream& input, RubiksCube& cube) {
+             RubiksCube candidate;
+
+             if (!candidate.readState(input) || !candidate.hasValidColors()) {
+                 input.setstate(std::ios::failbit);
+                 return input;
+             }
+
+             cube = candidate;
+             return input;
+         }
+
+         std::ostream& operator<<(std::ostream& output, const RubiksCube& cube) {
+               for (const auto& face : cube.faces_) {
+                   for (std::size_t cellIndex = 0;
+                        cellIndex < RubiksCube::kCellsPerFace;
+                        ++cellIndex) {
+                       if (cellIndex > 0) {
+                           output << ' ';
+                       }
+
+                       const std::size_t colorIndex =
+                           static_cast<std::size_t>(face[cellIndex]);
+
+                       output << RubiksCube::kColorSymbols[colorIndex];
+                   }
+
+                   output << '\n';
+               }
+
+               return output;
+           }
