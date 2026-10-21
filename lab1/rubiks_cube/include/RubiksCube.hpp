@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 
 enum class Color { White, Yellow, Green, Blue, Orange, Red };
 
@@ -39,6 +40,17 @@ public:
    *  @throws std::out_of_range Если значение грани недопустимо.
    */
   void rotate(Face face);
+
+  /** @brief Перемешивает текущее состояние случайными поворотами.
+     *  @param moveCount Количество поворотов. Ноль не изменяет кубик.
+     */
+    void scramble(std::size_t moveCount);
+
+    /** @brief Перемешивает текущее состояние с заданным seed.
+     *  @param moveCount Количество поворотов.
+     *  @param seed Начальное значение генератора.
+     */
+    void scramble(std::size_t moveCount, std::uint32_t seed);
 
 private:
   void rotateFaceClockwise(Face face);

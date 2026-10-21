@@ -1,5 +1,6 @@
 #include "RubiksCube.hpp"
 #include <stdexcept>
+#include <random>
 
 RubiksCube::RubiksCube() {
   const std::array<Color, kFaceCount> solvedColors{Color::White,  Color::Yellow,
@@ -117,3 +118,28 @@ void RubiksCube::rotate(Face face) {
   rotateFaceClockwise(face);
   rotateNeighborStrips(strips);
 }
+
+void RubiksCube::scramble(std::size_t moveCount) {
+     if (moveCount == 0) {
+         return;
+     }
+
+     std::random_device seedSource;
+     const auto seed = static_cast<std::uint32_t>(seedSource());
+
+     scramble(moveCount, seed);
+ }
+
+ void RubiksCube::scramble(std::size_t moveCount, std::uint32_t seed) {
+     std::mt19937 generator(seed);
+     std::uniform_int_distribution<std::size_t> faceDistribution(
+         0, kFaceCount - 1
+     );
+
+     for (std::size_t move = 0; move < moveCount; ++move) {
+         const std::size_t faceIndex = faceDistribution(generator);
+         const Face selectedFace = static_cast<Face>(faceIndex);
+
+         rotate(selectedFace);
+     }
+ }
