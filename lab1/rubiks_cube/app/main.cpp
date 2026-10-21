@@ -14,12 +14,21 @@ namespace {
 constexpr std::size_t kSideLength = 3;
 constexpr std::size_t kQuarterTurnsPerCycle = 4;
 constexpr std::size_t kMaxScrambleMoves = 10000;
+constexpr std::size_t kInitialScrambleMoves = 30;
 constexpr std::array<const char *, 6> kFaceNames{
     "Верхняя (U)", "Нижняя (D)", "Передняя (F)",
     "Задняя (B)", "Левая (L)", "Правая (R)"};
 constexpr std::array<char, 6> kColorSymbols{'W', 'Y', 'G', 'B', 'O', 'R'};
 
-enum class MenuCommand { Exit, Show, Rotate, Scramble, Check, Save, Load, Reset };
+enum class MenuCommand {
+  Exit, Show, Rotate, Scramble, Check, Save, Load, Reset, NewGame
+};
+
+RubiksCube createScrambledCube() {
+  RubiksCube cube;
+  cube.scramble(kInitialScrambleMoves);
+  return cube;
+}
 
 std::optional<std::string> readLine(const std::string &prompt) {
   std::cout << prompt;
@@ -94,7 +103,8 @@ void showMenu() {
                "4. Проверить, собран ли кубик\n"
                "5. Сохранить в файл\n"
                "6. Загрузить из файла\n"
-               "7. Начать заново\n"
+               "7. Сбросить в собранное состояние\n"
+               "8. Новая случайная игра\n"
                "0. Выход\n";
 }
 
@@ -220,14 +230,29 @@ bool loadCubeFromMenu(RubiksCube &cube) {
 }
 
 bool resetCube(RubiksCube &cube) {
-  const auto answer = readNumber("Начать заново? 1 — да, 0 — нет: ", 0, 1);
+  const auto answer = readNumber("Сбросить в собранное состояние? 1 — да, 0 — нет: ", 0, 1);
   if (!answer) {
     return false;
   }
   if (*answer == 1) {
     cube = RubiksCube{};
-    std::cout << "Начальное состояние восстановлено.\n";
+    std::cout << "Кубик сброшен в собранное состояние.\n";
     showCube(cube);
+  }
+  return true;
+}
+
+bool startNewGame(RubiksCube &cube) {
+  const auto answer = readNumber("Начать новую случайную игру? 1 — да, 0 — нет: ", 0, 1);
+  if (!answer) {
+    return false;
+  }
+  if (*answer == 1) {
+    cube = createScrambledCube();
+    std::cout << "Начата новая игра: выполнено " << kInitialScrambleMoves
+              << " случайных поворотов.\n";
+    showCube(cube);
+    showStatus(cube);
   }
   return true;
 }
@@ -242,6 +267,7 @@ bool executeCommand(MenuCommand command, RubiksCube &cube) {
   case MenuCommand::Save: return saveCube(cube);
   case MenuCommand::Load: return loadCubeFromMenu(cube);
   case MenuCommand::Reset: return resetCube(cube);
+  case MenuCommand::NewGame: return startNewGame(cube);
   }
   throw std::logic_error("Неизвестная команда меню");
 }
@@ -250,7 +276,7 @@ void runMenu(RubiksCube &cube) {
   while (true) {
     showMenu();
     const auto choice = readNumber(
-        "Выбор: ", 0, static_cast<std::size_t>(MenuCommand::Reset));
+        "Выбор: ", 0, static_cast<std::size_t>(MenuCommand::NewGame));
     if (!choice) {
       break;
     }
@@ -272,10 +298,9 @@ int main(int argumentCount, char *arguments[]) {
     return 1;
   }
   try {
-    RubiksCube cube;
-    if (argumentCount == 2) {
-      cube = loadCube(arguments[1]);
-    }
+    RubiksCube cube = argumentCount == 2
+                         ? loadCube(arguments[1])
+                         : createScrambledCube();
     std::cout << "Цвета: W — белый, Y — жёлтый, G — зелёный, "
                  "B — синий, O — оранжевый, R — красный.\n";
     showCube(cube);
