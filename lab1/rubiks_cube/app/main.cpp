@@ -1,34 +1,37 @@
- #include "RubiksCube.hpp"
+#include "RubiksCube.hpp"
 
-   #include <iostream>
+#include <array>
+#include <iostream>
 
-   int main() {
-       constexpr std::size_t kQuarterTurnsPerCycle = 4;
+int main() {
+  constexpr std::size_t kQuarterTurnsPerCycle = 4;
+  constexpr std::array<Face, 6> kFaces{
+      Face::Up, Face::Down, Face::Front,
+      Face::Back, Face::Left, Face::Right};
 
-       RubiksCube cube;
-       const RubiksCube originalCube(cube);
+  std::cout << std::boolalpha;
 
-       cube.rotateFront();
+  for (Face face : kFaces) {
+    RubiksCube cube;
+    const RubiksCube originalCube(cube);
 
-       const bool solvedAfterTurn = cube.isSolved();
-       const bool equalsOriginalAfterTurn = cube == originalCube;
+    cube.rotate(face);
+    const bool changed = cube != originalCube;
 
-       const Color upperBottomLeftColor = cube.colorAt(Face::Up, 2, 0);
-       const bool upperCellIsOrange = upperBottomLeftColor == Color::Orange;
+    for (std::size_t turn = 1; turn < kQuarterTurnsPerCycle; ++turn) {
+      cube.rotate(face);
+    }
 
-       std::cout << std::boolalpha;
-       std::cout << "Solved after one turn: " << solvedAfterTurn << '\n';
-       std::cout << "Equals original after one turn: "
-                 << equalsOriginalAfterTurn << '\n';
-       std::cout << "Upper bottom-left cell is orange: "
-                 << upperCellIsOrange << '\n';
+    const bool restored = cube == originalCube;
 
-       for (std::size_t turn = 1; turn < kQuarterTurnsPerCycle; ++turn) {
-           cube.rotateFront();
-       }
+    std::cout << "Face " << static_cast<std::size_t>(face)
+              << ": changed=" << changed
+              << ", restored=" << restored << '\n';
 
-       const bool restored = cube == originalCube;
-       std::cout << "Restored after four turns: " << restored << '\n';
+    if (!changed || !restored) {
+      return 1;
+    }
+  }
 
-       return 0;
-   }
+  return 0;
+}
