@@ -2,6 +2,14 @@
 
    #include <limits>
    #include <stdexcept>
+   #include <istream>
+   #include <ostream>
+   #include <string>
+
+   namespace {
+      const std::string kHeadKeyword = "HEAD";
+      const std::string kMarksKeyword = "MARKS";
+      }
 
    Tape::Position Tape::headPosition() const {
        return headPosition_;
@@ -67,3 +75,45 @@
    bool Tape::operator!=(const Tape& other) const {
        return !(*this == other);
    }
+
+   std::ostream& operator<<(std::ostream& output, const Tape& tape) {
+          output << kHeadKeyword << ' ' << tape.headPosition_ << '\n';
+          output << kMarksKeyword << ' ' << tape.markedCells_.size();
+
+          for (Tape::Position position : tape.markedCells_) {
+              output << ' ' << position;
+          }
+
+          output << '\n';
+          return output;
+      }
+
+      std::istream& operator>>(std::istream& input, Tape& tape) {
+            Tape candidate;
+            std::string headKeyword;
+            std::string marksKeyword;
+            std::int64_t markCount{};
+
+            if (!(input >> headKeyword >> candidate.headPosition_
+                        >> marksKeyword >> markCount) ||
+                headKeyword != kHeadKeyword ||
+                marksKeyword != kMarksKeyword ||
+                markCount < 0) {
+                input.setstate(std::ios::failbit);
+                return input;
+            }
+
+            for (std::int64_t index = 0; index < markCount; ++index) {
+                Tape::Position position{};
+
+                if (!(input >> position) || candidate.isMarked(position)) {
+                    input.setstate(std::ios::failbit);
+                    return input;
+                }
+
+                candidate.setMarked(position, true);
+            }
+
+            tape = candidate;
+            return input;
+        }

@@ -3,6 +3,7 @@
 #include <exception>
 #include <iostream>
 #include <limits>
+#include <sstream>
 #include <stdexcept>
 
 namespace {
@@ -126,6 +127,35 @@ bool demonstrateMovementBoundary(Tape::Position position, bool rightward) {
   }
   return false;
 }
+bool demonstrateSerialization() {
+  Tape original;
+  original.moveTo(-1);
+  original.mark();
+  original.setMarked(5, true);
+  std::stringstream state;
+  state << original;
+
+  Tape restored;
+  restored.mark();
+  state >> restored;
+  const bool correct = static_cast<bool>(state) && restored == original;
+  std::cout << "Serialized tape:\n" << original;
+  std::cout << "Stream round-trip preserves state: " << correct << '\n';
+  return correct;
+}
+
+bool demonstrateInvalidInput() {
+  Tape tape;
+  tape.moveTo(-1);
+  tape.mark();
+  const Tape original(tape);
+  std::istringstream input("HEAD 5\nMARKS 2 1 1\n");
+  input >> tape;
+
+  const bool preserved = input.fail() && tape == original;
+  std::cout << "Duplicate marks rejected without state changes: " << preserved << '\n';
+  return preserved;
+}
 } // namespace
 
 int main() {
@@ -140,9 +170,11 @@ int main() {
         std::numeric_limits<Tape::Position>::min(), false);
     const bool rightBoundary = demonstrateMovementBoundary(
         std::numeric_limits<Tape::Position>::max(), true);
+    const bool serialization = demonstrateSerialization();
+    const bool invalidInput = demonstrateInvalidInput();
 
     return movement && editing && copying && repeatedMark && emptyErase &&
-                   leftBoundary && rightBoundary
+                   leftBoundary && rightBoundary && serialization && invalidInput
                ? 0 : 1;
   } catch (const std::exception &error) {
     std::cerr << "Error: " << error.what() << '\n';

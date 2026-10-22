@@ -2,6 +2,7 @@
 
    #include <cstdint>
    #include <set>
+   #include <iosfwd>
 
    /** @brief Лента машины Поста с кареткой и отмеченными клетками. */
    class Tape {
@@ -31,6 +32,14 @@
 
        bool operator==(const Tape& other) const;
        bool operator!=(const Tape& other) const;
+
+       /** @brief Записывает положение каретки и координаты отмеченных клеток. */
+       friend std::ostream& operator<<(std::ostream& output, const Tape& tape);
+
+          /** @brief Загружает ленту.
+           *  При ошибке устанавливает failbit и сохраняет исходное состояние.
+           */
+       friend std::istream& operator>>(std::istream& input, Tape& tape);
 
    private:
        Position headPosition_ = 0;
