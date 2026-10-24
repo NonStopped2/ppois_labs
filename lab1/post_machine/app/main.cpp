@@ -215,6 +215,27 @@ bool demonstrateInvalidInstruction() {
   std::cout << "Invalid instruction arguments rejected: false\n";
   return false;
 }
+bool demonstrateInstructionSerialization() {
+  const Instruction original(Operation::Branch, 2, 5);
+  std::stringstream state;
+  state << original;
+  Instruction restored;
+  state >> restored;
+  const bool correct = static_cast<bool>(state) && restored == original;
+  std::cout << "Serialized instruction: " << original << '\n';
+  std::cout << "Instruction stream round-trip preserves state: " << correct << '\n';
+  return correct;
+}
+
+bool demonstrateInvalidInstructionInput() {
+  Instruction instruction(Operation::Mark, 3);
+  const Instruction original(instruction);
+  std::istringstream input("IF 2 -5");
+  input >> instruction;
+  const bool preserved = input.fail() && instruction == original;
+  std::cout << "Invalid instruction input preserves state: " << preserved << '\n';
+  return preserved;
+}
 } // namespace
 
 int main() {
@@ -224,7 +245,10 @@ int main() {
     const bool instructions = demonstrateInstructions();
     const bool copying = demonstrateInstructionCopying();
     const bool invalid = demonstrateInvalidInstruction();
-    return tape && instructions && copying && invalid ? 0 : 1;
+    const bool serialization = demonstrateInstructionSerialization();
+    const bool invalidInput = demonstrateInvalidInstructionInput();
+    return tape && instructions && copying && invalid && serialization && invalidInput
+               ? 0 : 1;
   } catch (const std::exception &error) {
     std::cerr << "Error: " << error.what() << '\n';
     return 1;

@@ -1,6 +1,27 @@
 #include "Instruction.hpp"
 
+   #include <array>
+   #include <istream>
+   #include <ostream>
    #include <stdexcept>
+   #include <string>
+
+   namespace {
+      constexpr std::array<const char*, 6> kOperationNames{
+          "MARK", "ERASE", "LEFT", "RIGHT", "IF", "HALT"
+      };
+
+      bool tryParseOperation(const std::string& name, Operation& operation) {
+          for (std::size_t index = 0; index < kOperationNames.size(); ++index) {
+              if (name == kOperationNames[index]) {
+                  operation = static_cast<Operation>(index);
+                  return true;
+              }
+          }
+
+          return false;
+      }
+      }
 
    Instruction::Instruction(Operation operation,
                             Label next,
@@ -52,3 +73,54 @@
    bool Instruction::operator!=(const Instruction& other) const {
        return !(*this == other);
    }
+
+   std::ostream& operator<<(std::ostream& output,
+                               const Instruction& instruction) {
+          const auto operation = instruction.operation();
+
+          output << kOperationNames.at(static_cast<std::size_t>(operation));
+
+          if (operation != Operation::Halt) {
+              output << ' ' << instruction.next();
+          }
+
+          if (operation == Operation::Branch) {
+              output << ' ' << instruction.nextIfMarked();
+          }
+
+          return output;
+      }
+
+      std::istream& operator>>(std::istream& input,
+                                Instruction& instruction) {
+           std::string name;
+           Operation operation{};
+
+           if (!(input >> name) || !tryParseOperation(name, operation)) {
+               input.setstate(std::ios::failbit);
+               return input;
+           }
+
+           Instruction::Label next{};
+           Instruction::Label nextIfMarked{};
+
+           if (operation != Operation::Halt) {
+               input >> next;
+           }
+
+           if (operation == Operation::Branch) {
+               input >> nextIfMarked;
+           }
+
+           if (!input) {
+               return input;
+           }
+
+           try {
+               instruction = Instruction(operation, next, nextIfMarked);
+           } catch (const std::invalid_argument&) {
+               input.setstate(std::ios::failbit);
+           }
+
+           return input;
+       }

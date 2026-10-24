@@ -1,6 +1,7 @@
 #pragma once
 
    #include <cstdint>
+   #include <iosfwd>
 
    /** @brief Действие, выполняемое командой машины Поста. */
    enum class Operation {
@@ -35,3 +36,9 @@
        Label next_;
        Label nextIfMarked_;
    };
+
+std::ostream& operator<<(std::ostream& output,
+                               const Instruction& instruction);
+
+std::istream& operator>>(std::istream& input,
+                               Instruction& instruction);
