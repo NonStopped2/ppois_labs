@@ -4,3 +4,4 @@ build/
 __pycache__/
 *.profraw
 *.profdata
+/lab1/VERIFICATION.md
