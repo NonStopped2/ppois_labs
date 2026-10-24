@@ -1,4 +1,5 @@
 #include "Tape.hpp"
+#include "Instruction.hpp"
 
 #include <exception>
 #include <iostream>
@@ -156,26 +157,74 @@ bool demonstrateInvalidInput() {
   std::cout << "Duplicate marks rejected without state changes: " << preserved << '\n';
   return preserved;
 }
+bool demonstrateTape() {
+  const bool movement = demonstrateMovement();
+  const bool editing = demonstrateEditing();
+  const bool copying = demonstrateCopying();
+  const bool repeatedMark = demonstrateRepeatedMarkError();
+  const bool emptyErase = demonstrateEmptyEraseError();
+  const bool leftBoundary = demonstrateMovementBoundary(
+      std::numeric_limits<Tape::Position>::min(), false);
+  const bool rightBoundary = demonstrateMovementBoundary(
+      std::numeric_limits<Tape::Position>::max(), true);
+  const bool serialization = demonstrateSerialization();
+  const bool invalidInput = demonstrateInvalidInput();
+  return movement && editing && copying && repeatedMark && emptyErase &&
+         leftBoundary && rightBoundary && serialization && invalidInput;
+}
+
+bool demonstrateInstructions() {
+  const Instruction stop;
+  const bool halt = stop.operation() == Operation::Halt && stop.next() == 0 &&
+                    stop.nextIfMarked() == 0;
+  const Instruction mark(Operation::Mark, 4);
+  const bool singleJump = mark.operation() == Operation::Mark && mark.next() == 4 &&
+                          mark.nextIfMarked() == 0;
+  const Instruction branch(Operation::Branch, 2, 5);
+  const bool twoJumps = branch.operation() == Operation::Branch && branch.next() == 2 &&
+                        branch.nextIfMarked() == 5;
+  std::cout << "Default instruction is HALT: " << halt << '\n';
+  std::cout << "Ordinary instruction stores one jump: " << singleJump << '\n';
+  std::cout << "Branch instruction stores two jumps: " << twoJumps << '\n';
+  return halt && singleJump && twoJumps;
+}
+
+bool demonstrateInstructionCopying() {
+  const Instruction original(Operation::Branch, 2, 5);
+  Instruction copied(original);
+  Instruction assigned;
+  assigned = original;
+  const bool equal = copied == original && assigned == original;
+  copied = Instruction(Operation::Left, 2);
+  assigned = Instruction(Operation::Branch, 2, 7);
+  const bool independent = copied != original && assigned != original &&
+                           original.operation() == Operation::Branch &&
+                           original.next() == 2 && original.nextIfMarked() == 5;
+  std::cout << "Instruction copies preserve state: " << equal << '\n';
+  std::cout << "Instruction copies are independent: " << independent << '\n';
+  return equal && independent;
+}
+
+bool demonstrateInvalidInstruction() {
+  try {
+    const Instruction invalid(Operation::Mark, 0);
+  } catch (const std::invalid_argument &) {
+    std::cout << "Invalid instruction arguments rejected: true\n";
+    return true;
+  }
+  std::cout << "Invalid instruction arguments rejected: false\n";
+  return false;
+}
 } // namespace
 
 int main() {
   try {
     std::cout << std::boolalpha;
-    const bool movement = demonstrateMovement();
-    const bool editing = demonstrateEditing();
-    const bool copying = demonstrateCopying();
-    const bool repeatedMark = demonstrateRepeatedMarkError();
-    const bool emptyErase = demonstrateEmptyEraseError();
-    const bool leftBoundary = demonstrateMovementBoundary(
-        std::numeric_limits<Tape::Position>::min(), false);
-    const bool rightBoundary = demonstrateMovementBoundary(
-        std::numeric_limits<Tape::Position>::max(), true);
-    const bool serialization = demonstrateSerialization();
-    const bool invalidInput = demonstrateInvalidInput();
-
-    return movement && editing && copying && repeatedMark && emptyErase &&
-                   leftBoundary && rightBoundary && serialization && invalidInput
-               ? 0 : 1;
+    const bool tape = demonstrateTape();
+    const bool instructions = demonstrateInstructions();
+    const bool copying = demonstrateInstructionCopying();
+    const bool invalid = demonstrateInvalidInstruction();
+    return tape && instructions && copying && invalid ? 0 : 1;
   } catch (const std::exception &error) {
     std::cerr << "Error: " << error.what() << '\n';
     return 1;
