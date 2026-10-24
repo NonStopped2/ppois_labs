@@ -1,6 +1,7 @@
 #include "Tape.hpp"
 #include "Instruction.hpp"
 #include "Program.hpp"
+#include "PostMachine.hpp"
 
 #include <exception>
 #include <iostream>
@@ -265,6 +266,42 @@ bool demonstrateProgram() {
   std::cout << "Program stream round-trip preserves state: " << serialized << '\n';
   return stored && replaced && removed && serialized;
 }
+void showMachineState(const PostMachine& machine) {
+  std::cout << "Current instruction: " << machine.currentLabel()
+            << ", halted: " << machine.isHalted() << '\n';
+  showTape(machine.tape());
+}
+
+Program makeExecutionExample() {
+  Program program;
+  program.add(1, Instruction(Operation::Mark, 2));
+  program.add(2, Instruction(Operation::Right, 3));
+  program.add(3, Instruction{});
+  return program;
+}
+
+bool demonstrateMachine() {
+  constexpr std::size_t kExampleSteps = 3;
+  const Program program = makeExecutionExample();
+  const Tape initialTape;
+  PostMachine stepped(program, initialTape);
+  std::cout << "Step-by-step execution:\n";
+  for (std::size_t index = 0; index < kExampleSteps; ++index) {
+    if (!stepped.step()) {
+      return false;
+    }
+    showMachineState(stepped);
+  }
+  PostMachine completed(program, initialTape);
+  const bool equivalent = completed.run(kExampleSteps) == kExampleSteps && completed == stepped;
+  const bool result = completed.isHalted() && completed.tape().isMarked(0) &&
+                      completed.tape().headPosition() == 1 && completed.currentLabel() == 3;
+  const bool independent = !initialTape.isMarked(0) && completed.program() == program;
+  std::cout << "Step-by-step and full execution agree: " << equivalent << '\n';
+  std::cout << "Final tape and stop state are correct: " << result << '\n';
+  std::cout << "Original tape and program are unchanged: " << independent << '\n';
+  return equivalent && result && independent;
+}
 } // namespace
 
 int main() {
@@ -277,7 +314,9 @@ int main() {
     const bool serialization = demonstrateInstructionSerialization();
     const bool invalidInput = demonstrateInvalidInstructionInput();
     const bool program = demonstrateProgram();
-    return tape && instructions && copying && invalid && serialization && invalidInput && program
+    const bool machine = demonstrateMachine();
+    return tape && instructions && copying && invalid && serialization && invalidInput &&
+                   program && machine
                ? 0 : 1;
   } catch (const std::exception &error) {
     std::cerr << "Error: " << error.what() << '\n';

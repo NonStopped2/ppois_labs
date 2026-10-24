@@ -16,6 +16,7 @@
        post_machine/src/Tape.cpp
        post_machine/src/Instruction.cpp
        post_machine/src/Program.cpp
+       post_machine/src/PostMachine.cpp
    )
 
    target_include_directories(post_machine_core PUBLIC
