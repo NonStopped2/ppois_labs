@@ -1,325 +1,367 @@
-#include "Tape.hpp"
-#include "Instruction.hpp"
-#include "Program.hpp"
 #include "PostMachine.hpp"
 
+#include <cstdint>
 #include <exception>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 
 namespace {
-constexpr Tape::Position kFirstVisiblePosition = -2;
-constexpr Tape::Position kLastVisiblePosition = 2;
-constexpr Tape::Position kDistantPosition = 1'000'000'000'000;
+constexpr std::size_t kDefaultStepLimit = 10000;
+constexpr std::int64_t kMaxInteractiveSteps = 1000000;
 
-void showTape(const Tape &tape) {
-  std::cout << "Head position: " << tape.headPosition() << '\n';
-  std::cout << "Cells " << kFirstVisiblePosition << ".." << kLastVisiblePosition << ": ";
-  for (Tape::Position position = kFirstVisiblePosition;
-       position <= kLastVisiblePosition; ++position) {
-    const bool selected = position == tape.headPosition();
-    std::cout << (selected ? '[' : ' ')
-              << (tape.isMarked(position) ? '*' : '.')
-              << (selected ? ']' : ' ') << ' ';
-  }
-  std::cout << '\n';
+enum class Command {
+    Exit,
+    State,
+    Program,
+    Add,
+    Replace,
+    Remove,
+    Cell,
+    Head,
+    Step,
+    Run,
+    Restart,
+    Load,
+    Save
+};
+
+std::optional<std::string> readLine(const std::string& prompt) {
+    std::cout << prompt;
+    std::string line;
+    if (!std::getline(std::cin, line)) {
+        return std::nullopt;
+    }
+    return line;
 }
 
-bool demonstrateMovement() {
-  Tape tape;
-  tape.mark();
-  tape.moveRight();
-  tape.mark();
-  const bool twoMarks = tape.headPosition() == 1 && tape.isMarked(0) && tape.isMarked(1);
-  showTape(tape);
-
-  tape.moveLeft();
-  tape.moveLeft();
-  tape.mark();
-  const bool negativePosition = tape.headPosition() == -1 && tape.currentCellMarked();
-  const bool oldMarksPreserved = tape.isMarked(0) && tape.isMarked(1);
-  showTape(tape);
-
-  const bool correct = twoMarks && negativePosition && oldMarksPreserved;
-  std::cout << "Movement and negative coordinates: " << correct << '\n';
-  return correct;
+std::optional<std::int64_t> readNumber(const std::string& prompt, std::int64_t minimum,
+                                       std::int64_t maximum) {
+    while (const auto line = readLine(prompt)) {
+        std::istringstream parser(*line);
+        std::int64_t number{};
+        std::string extra;
+        if ((parser >> number) && !(parser >> extra) && number >= minimum && number <= maximum) {
+            return number;
+        }
+        std::cout << "Введите целое число от " << minimum << " до " << maximum << ".\n";
+    }
+    return std::nullopt;
 }
 
-bool demonstrateEditing() {
-  Tape tape;
-  tape.moveTo(kDistantPosition);
-  tape.setMarked(kDistantPosition, true);
-  tape.setMarked(kDistantPosition, true);
-  tape.setMarked(-kDistantPosition, true);
-  const bool marked = tape.currentCellMarked() && tape.isMarked(-kDistantPosition);
-
-  tape.erase();
-  const bool erased = !tape.currentCellMarked() && tape.isMarked(-kDistantPosition);
-  tape.setMarked(-kDistantPosition, false);
-  tape.setMarked(-kDistantPosition, false);
-  const bool removed = !tape.isMarked(-kDistantPosition);
-
-  const bool correct = marked && erased && removed;
-  std::cout << "Editing distant cells: " << correct << '\n';
-  return correct;
+std::optional<std::filesystem::path> readPath() {
+    while (const auto line = readLine("Путь к файлу: ")) {
+        if (!line->empty()) {
+            return std::filesystem::path(*line);
+        }
+        std::cout << "Путь не должен быть пустым.\n";
+    }
+    return std::nullopt;
 }
 
-bool demonstrateCopying() {
-  Tape original;
-  original.mark();
-  original.moveRight();
-  original.mark();
-  Tape copied(original);
-  Tape assigned;
-  assigned = original;
-  const bool equal = copied == original && assigned == original;
-
-  copied.erase();
-  assigned.moveLeft();
-  const bool independent = original.isMarked(1) && original.headPosition() == 1 &&
-                           copied != original && assigned != original;
-  std::cout << "Copying preserves state: " << equal << '\n';
-  std::cout << "Copies are independent: " << independent << '\n';
-  return equal && independent;
+std::optional<Instruction> readInstruction() {
+    while (const auto line =
+               readLine("Команда (MARK n, ERASE n, LEFT n, RIGHT n, IF n m, HALT): ")) {
+        std::istringstream parser(*line);
+        Instruction instruction;
+        if (parser >> instruction) {
+            parser >> std::ws;
+            if (parser.eof()) {
+                return instruction;
+            }
+        }
+        std::cout << "Некорректная команда или лишние аргументы.\n";
+    }
+    return std::nullopt;
 }
 
-bool demonstrateRepeatedMarkError() {
-  Tape tape;
-  tape.mark();
-  const Tape original(tape);
-  try {
-    tape.mark();
-  } catch (const std::runtime_error &) {
-    const bool preserved = tape == original;
-    std::cout << "Repeated mark rejected without state changes: " << preserved << '\n';
-    return preserved;
-  }
-  return false;
+void showState(const PostMachine& machine) {
+    std::cout << "\nЛента (* — метка, отсутствующие координаты пусты):\n"
+              << machine.tape() << "Текущая команда: " << machine.currentLabel() << '\n'
+              << (machine.isHalted() ? "Машина остановлена.\n" : "Машина не остановлена.\n");
 }
 
-bool demonstrateEmptyEraseError() {
-  Tape tape;
-  const Tape original(tape);
-  try {
-    tape.erase();
-  } catch (const std::runtime_error &) {
-    const bool preserved = tape == original;
-    std::cout << "Empty cell erase rejected without state changes: " << preserved << '\n';
-    return preserved;
-  }
-  return false;
+void showMenu() {
+    std::cout << "\n=== Машина Поста ===\n"
+                 "1. Показать состояние\n2. Показать программу\n"
+                 "3. Добавить команду\n4. Заменить команду\n5. Удалить команду\n"
+                 "6. Изменить клетку\n7. Переместить каретку\n8. Выполнить шаг\n"
+                 "9. Выполнить программу\n10. Перезапустить с исходной лентой\n"
+                 "11. Загрузить состояние\n12. Сохранить состояние\n0. Выход\n";
 }
 
-bool demonstrateMovementBoundary(Tape::Position position, bool rightward) {
-  Tape tape;
-  tape.moveTo(position);
-  const Tape original(tape);
-  try {
-    if (rightward) {
-      tape.moveRight();
+PostMachine makeExampleMachine() {
+    Program program;
+    program.add(1, Instruction(Operation::Branch, 3, 2));
+    program.add(2, Instruction(Operation::Right, 1));
+    program.add(3, Instruction(Operation::Mark, 4));
+    program.add(4, Instruction{});
+    return PostMachine(program);
+}
+
+void reconfigure(PostMachine& machine, PostMachine& initial, const Program& program,
+                 const Tape& tape) {
+    const PostMachine candidate(program, tape);
+    machine = candidate;
+    initial = candidate;
+    std::cout << "Настройки изменены. Исполнение начнётся с первой команды.\n";
+}
+
+bool editInstruction(PostMachine& machine, PostMachine& initial, bool replace) {
+    const auto label = readNumber("Номер команды: ", 1, std::numeric_limits<Program::Label>::max());
+    if (!label) {
+        return false;
+    }
+    const auto instruction = readInstruction();
+    if (!instruction) {
+        return false;
+    }
+    Program program = machine.program();
+    if (replace) {
+        program.replace(*label, *instruction);
     } else {
-      tape.moveLeft();
+        program.add(*label, *instruction);
     }
-  } catch (const std::overflow_error &) {
-    const bool preserved = tape == original;
-    std::cout << (rightward ? "Right" : "Left")
-              << " boundary rejected without state changes: " << preserved << '\n';
-    return preserved;
-  }
-  return false;
-}
-bool demonstrateSerialization() {
-  Tape original;
-  original.moveTo(-1);
-  original.mark();
-  original.setMarked(5, true);
-  std::stringstream state;
-  state << original;
-
-  Tape restored;
-  restored.mark();
-  state >> restored;
-  const bool correct = static_cast<bool>(state) && restored == original;
-  std::cout << "Serialized tape:\n" << original;
-  std::cout << "Stream round-trip preserves state: " << correct << '\n';
-  return correct;
-}
-
-bool demonstrateInvalidInput() {
-  Tape tape;
-  tape.moveTo(-1);
-  tape.mark();
-  const Tape original(tape);
-  std::istringstream input("HEAD 5\nMARKS 2 1 1\n");
-  input >> tape;
-
-  const bool preserved = input.fail() && tape == original;
-  std::cout << "Duplicate marks rejected without state changes: " << preserved << '\n';
-  return preserved;
-}
-bool demonstrateTape() {
-  const bool movement = demonstrateMovement();
-  const bool editing = demonstrateEditing();
-  const bool copying = demonstrateCopying();
-  const bool repeatedMark = demonstrateRepeatedMarkError();
-  const bool emptyErase = demonstrateEmptyEraseError();
-  const bool leftBoundary = demonstrateMovementBoundary(
-      std::numeric_limits<Tape::Position>::min(), false);
-  const bool rightBoundary = demonstrateMovementBoundary(
-      std::numeric_limits<Tape::Position>::max(), true);
-  const bool serialization = demonstrateSerialization();
-  const bool invalidInput = demonstrateInvalidInput();
-  return movement && editing && copying && repeatedMark && emptyErase &&
-         leftBoundary && rightBoundary && serialization && invalidInput;
-}
-
-bool demonstrateInstructions() {
-  const Instruction stop;
-  const bool halt = stop.operation() == Operation::Halt && stop.next() == 0 &&
-                    stop.nextIfMarked() == 0;
-  const Instruction mark(Operation::Mark, 4);
-  const bool singleJump = mark.operation() == Operation::Mark && mark.next() == 4 &&
-                          mark.nextIfMarked() == 0;
-  const Instruction branch(Operation::Branch, 2, 5);
-  const bool twoJumps = branch.operation() == Operation::Branch && branch.next() == 2 &&
-                        branch.nextIfMarked() == 5;
-  std::cout << "Default instruction is HALT: " << halt << '\n';
-  std::cout << "Ordinary instruction stores one jump: " << singleJump << '\n';
-  std::cout << "Branch instruction stores two jumps: " << twoJumps << '\n';
-  return halt && singleJump && twoJumps;
-}
-
-bool demonstrateInstructionCopying() {
-  const Instruction original(Operation::Branch, 2, 5);
-  Instruction copied(original);
-  Instruction assigned;
-  assigned = original;
-  const bool equal = copied == original && assigned == original;
-  copied = Instruction(Operation::Left, 2);
-  assigned = Instruction(Operation::Branch, 2, 7);
-  const bool independent = copied != original && assigned != original &&
-                           original.operation() == Operation::Branch &&
-                           original.next() == 2 && original.nextIfMarked() == 5;
-  std::cout << "Instruction copies preserve state: " << equal << '\n';
-  std::cout << "Instruction copies are independent: " << independent << '\n';
-  return equal && independent;
-}
-
-bool demonstrateInvalidInstruction() {
-  try {
-    const Instruction invalid(Operation::Mark, 0);
-  } catch (const std::invalid_argument &) {
-    std::cout << "Invalid instruction arguments rejected: true\n";
+    reconfigure(machine, initial, program, machine.tape());
     return true;
-  }
-  std::cout << "Invalid instruction arguments rejected: false\n";
-  return false;
-}
-bool demonstrateInstructionSerialization() {
-  const Instruction original(Operation::Branch, 2, 5);
-  std::stringstream state;
-  state << original;
-  Instruction restored;
-  state >> restored;
-  const bool correct = static_cast<bool>(state) && restored == original;
-  std::cout << "Serialized instruction: " << original << '\n';
-  std::cout << "Instruction stream round-trip preserves state: " << correct << '\n';
-  return correct;
 }
 
-bool demonstrateInvalidInstructionInput() {
-  Instruction instruction(Operation::Mark, 3);
-  const Instruction original(instruction);
-  std::istringstream input("IF 2 -5");
-  input >> instruction;
-  const bool preserved = input.fail() && instruction == original;
-  std::cout << "Invalid instruction input preserves state: " << preserved << '\n';
-  return preserved;
-}
-Program makeExampleProgram() {
-  Program program;
-  program.add(4, Instruction(Operation::Erase, 3));
-  program.add(1, Instruction(Operation::Branch, 2, 4));
-  program.add(2, Instruction(Operation::Mark, 3));
-  program.add(3, Instruction(Operation::Halt));
-  return program;
-}
-
-bool demonstrateProgram() {
-  Program program = makeExampleProgram();
-  const bool stored = program.size() == 4 && program.firstLabel() == 1 &&
-                      program.instructionAt(1) == Instruction(Operation::Branch, 2, 4);
-  program.replace(2, Instruction(Operation::Right, 3));
-  const bool replaced = program.instructionAt(2) == Instruction(Operation::Right, 3);
-  program.add(10, Instruction{});
-  const bool removed = program.remove(10) && !program.contains(10) && !program.remove(10);
-  std::stringstream state;
-  state << program;
-  Program restored;
-  state >> restored;
-  const bool serialized = static_cast<bool>(state) && restored == program;
-  std::cout << "Serialized program:\n" << program;
-  std::cout << "Program lookup, replacement and removal: "
-            << (stored && replaced && removed) << '\n';
-  std::cout << "Program stream round-trip preserves state: " << serialized << '\n';
-  return stored && replaced && removed && serialized;
-}
-void showMachineState(const PostMachine& machine) {
-  std::cout << "Current instruction: " << machine.currentLabel()
-            << ", halted: " << machine.isHalted() << '\n';
-  showTape(machine.tape());
-}
-
-Program makeExecutionExample() {
-  Program program;
-  program.add(1, Instruction(Operation::Mark, 2));
-  program.add(2, Instruction(Operation::Right, 3));
-  program.add(3, Instruction{});
-  return program;
-}
-
-bool demonstrateMachine() {
-  constexpr std::size_t kExampleSteps = 3;
-  const Program program = makeExecutionExample();
-  const Tape initialTape;
-  PostMachine stepped(program, initialTape);
-  std::cout << "Step-by-step execution:\n";
-  for (std::size_t index = 0; index < kExampleSteps; ++index) {
-    if (!stepped.step()) {
-      return false;
+bool removeInstruction(PostMachine& machine, PostMachine& initial) {
+    const auto label = readNumber("Номер команды: ", 1, std::numeric_limits<Program::Label>::max());
+    if (!label) {
+        return false;
     }
-    showMachineState(stepped);
-  }
-  PostMachine completed(program, initialTape);
-  const bool equivalent = completed.run(kExampleSteps) == kExampleSteps && completed == stepped;
-  const bool result = completed.isHalted() && completed.tape().isMarked(0) &&
-                      completed.tape().headPosition() == 1 && completed.currentLabel() == 3;
-  const bool independent = !initialTape.isMarked(0) && completed.program() == program;
-  std::cout << "Step-by-step and full execution agree: " << equivalent << '\n';
-  std::cout << "Final tape and stop state are correct: " << result << '\n';
-  std::cout << "Original tape and program are unchanged: " << independent << '\n';
-  return equivalent && result && independent;
+    Program program = machine.program();
+    if (program.remove(*label)) {
+        reconfigure(machine, initial, program, machine.tape());
+    } else {
+        std::cout << "Команда не найдена.\n";
+    }
+    return true;
+}
+
+std::optional<Tape::Position> readPosition() {
+    return readNumber("Координата клетки: ", std::numeric_limits<Tape::Position>::min(),
+                      std::numeric_limits<Tape::Position>::max());
+}
+
+bool editCell(PostMachine& machine, PostMachine& initial) {
+    const auto position = readPosition();
+    if (!position) {
+        return false;
+    }
+    const auto marked = readNumber("Значение (0 — пусто, 1 — метка): ", 0, 1);
+    if (!marked) {
+        return false;
+    }
+    Tape tape = machine.tape();
+    tape.setMarked(*position, *marked == 1);
+    reconfigure(machine, initial, machine.program(), tape);
+    return true;
+}
+
+bool moveHead(PostMachine& machine, PostMachine& initial) {
+    const auto position = readPosition();
+    if (!position) {
+        return false;
+    }
+    Tape tape = machine.tape();
+    tape.moveTo(*position);
+    reconfigure(machine, initial, machine.program(), tape);
+    return true;
+}
+
+void stepMachine(PostMachine& machine) {
+    if (!machine.step()) {
+        std::cout << "Машина уже остановлена. Перезапустите её для повторного выполнения.\n";
+    }
+    showState(machine);
+}
+
+bool runMachine(PostMachine& machine) {
+    const auto limit = readNumber("Максимум команд: ", 1, kMaxInteractiveSteps);
+    if (!limit) {
+        return false;
+    }
+    const auto logging = readNumber("Журнал после каждой команды? 1 — да, 0 — нет: ", 0, 1);
+    if (!logging) {
+        return false;
+    }
+    const auto maximum = static_cast<std::size_t>(*limit);
+    const auto executed = *logging == 1 ? machine.run(maximum, std::cout) : machine.run(maximum);
+    std::cout << "Выполнено команд: " << executed << '\n';
+    showState(machine);
+    return true;
+}
+
+bool restartMachine(PostMachine& machine, const PostMachine& initial) {
+    const auto answer =
+        readNumber("Восстановить исходную ленту и начать сначала? 1 — да, 0 — нет: ", 0, 1);
+    if (!answer) {
+        return false;
+    }
+    if (*answer == 1) {
+        machine = initial;
+        showState(machine);
+    }
+    return true;
+}
+
+PostMachine loadMachine(const std::filesystem::path& path) {
+    std::ifstream input(path);
+    if (!input) {
+        throw std::runtime_error("Не удалось открыть файл для чтения");
+    }
+    PostMachine candidate;
+    if (!(input >> candidate)) {
+        throw std::runtime_error("Некорректное состояние машины в файле");
+    }
+    input >> std::ws;
+    if (input.bad() || !input.eof()) {
+        throw std::runtime_error("После состояния машины найдены лишние данные");
+    }
+    return candidate;
+}
+
+bool loadFromMenu(PostMachine& machine, PostMachine& initial) {
+    const auto path = readPath();
+    if (!path) {
+        return false;
+    }
+    const PostMachine candidate = loadMachine(*path);
+    const PostMachine start(candidate.program(), candidate.tape());
+    machine = candidate;
+    initial = start;
+    std::cout << "Состояние загружено.\n";
+    showState(machine);
+    return true;
+}
+
+std::optional<bool> confirmOverwrite(const std::filesystem::path& path) {
+    if (!std::filesystem::exists(path)) {
+        return true;
+    }
+    if (!std::filesystem::is_regular_file(path)) {
+        throw std::runtime_error("Указанный путь не является обычным файлом");
+    }
+    const auto answer = readNumber("Файл существует. Перезаписать? 1 — да, 0 — нет: ", 0, 1);
+    if (!answer) {
+        return std::nullopt;
+    }
+    return *answer == 1;
+}
+
+void writeMachine(const std::filesystem::path& path, const PostMachine& machine) {
+    std::ofstream output(path);
+    if (!output) {
+        throw std::runtime_error("Не удалось открыть файл для записи");
+    }
+    output << machine;
+    output.close();
+    if (!output) {
+        throw std::runtime_error("Не удалось записать состояние машины");
+    }
+}
+
+bool saveFromMenu(const PostMachine& machine) {
+    const auto path = readPath();
+    if (!path) {
+        return false;
+    }
+    const auto approved = confirmOverwrite(*path);
+    if (!approved) {
+        return false;
+    }
+    if (*approved) {
+        writeMachine(*path, machine);
+        std::cout << "Состояние сохранено.\n";
+    } else {
+        std::cout << "Сохранение отменено.\n";
+    }
+    return true;
+}
+
+bool executeCommand(Command command, PostMachine& machine, PostMachine& initial) {
+    switch (command) {
+    case Command::Exit: return false;
+    case Command::State: showState(machine); return true;
+    case Command::Program: std::cout << machine.program(); return true;
+    case Command::Add: return editInstruction(machine, initial, false);
+    case Command::Replace: return editInstruction(machine, initial, true);
+    case Command::Remove: return removeInstruction(machine, initial);
+    case Command::Cell: return editCell(machine, initial);
+    case Command::Head: return moveHead(machine, initial);
+    case Command::Step: stepMachine(machine); return true;
+    case Command::Run: return runMachine(machine);
+    case Command::Restart: return restartMachine(machine, initial);
+    case Command::Load: return loadFromMenu(machine, initial);
+    case Command::Save: return saveFromMenu(machine);
+    }
+    throw std::logic_error("Неизвестная команда меню");
+}
+
+void runMenu(PostMachine& machine) {
+    PostMachine initial(machine);
+    while (true) {
+        showMenu();
+        const auto choice = readNumber("Выбор: ", 0, static_cast<std::int64_t>(Command::Save));
+        if (!choice) {
+            break;
+        }
+        try {
+            if (!executeCommand(static_cast<Command>(*choice), machine, initial)) {
+                break;
+            }
+        } catch (const std::exception& error) {
+            std::cerr << "Ошибка: " << error.what() << '\n';
+        }
+    }
+    std::cout << "Работа завершена.\n";
+}
+
+int runFile(const std::filesystem::path& path, bool logging) {
+    PostMachine machine = loadMachine(path);
+    const auto executed =
+        logging ? machine.run(kDefaultStepLimit, std::cout) : machine.run(kDefaultStepLimit);
+    std::cout << "Выполнено команд: " << executed << '\n';
+    showState(machine);
+    return 0;
+}
+
+void showUsage(const char* executable) {
+    std::cout << "Использование: " << executable
+              << " [файл машины [-log]]\n"
+                 "Без аргументов открывается меню с учебным примером.\n"
+                 "С файлом программа выполняется сразу; лимит — "
+              << kDefaultStepLimit << " команд.\n";
 }
 } // namespace
 
-int main() {
-  try {
-    std::cout << std::boolalpha;
-    const bool tape = demonstrateTape();
-    const bool instructions = demonstrateInstructions();
-    const bool copying = demonstrateInstructionCopying();
-    const bool invalid = demonstrateInvalidInstruction();
-    const bool serialization = demonstrateInstructionSerialization();
-    const bool invalidInput = demonstrateInvalidInstructionInput();
-    const bool program = demonstrateProgram();
-    const bool machine = demonstrateMachine();
-    return tape && instructions && copying && invalid && serialization && invalidInput &&
-                   program && machine
-               ? 0 : 1;
-  } catch (const std::exception &error) {
-    std::cerr << "Error: " << error.what() << '\n';
-    return 1;
-  }
+int main(int argumentCount, char* arguments[]) {
+    try {
+        if (argumentCount == 2 && std::string(arguments[1]) == "--help") {
+            showUsage(arguments[0]);
+            return 0;
+        }
+        if (argumentCount == 1) {
+            PostMachine machine = makeExampleMachine();
+            std::cout << "Учебный пример: добавление одной метки справа от блока меток.\n";
+            showState(machine);
+            runMenu(machine);
+            return 0;
+        }
+        if (argumentCount == 2 || (argumentCount == 3 && std::string(arguments[2]) == "-log")) {
+            return runFile(arguments[1], argumentCount == 3);
+        }
+        showUsage(arguments[0]);
+        return 1;
+    } catch (const std::exception& error) {
+        std::cerr << "Ошибка: " << error.what() << '\n';
+        return 1;
+    }
 }
