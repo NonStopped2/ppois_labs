@@ -1,5 +1,6 @@
 #include "Tape.hpp"
 #include "Instruction.hpp"
+#include "Program.hpp"
 
 #include <exception>
 #include <iostream>
@@ -236,6 +237,34 @@ bool demonstrateInvalidInstructionInput() {
   std::cout << "Invalid instruction input preserves state: " << preserved << '\n';
   return preserved;
 }
+Program makeExampleProgram() {
+  Program program;
+  program.add(4, Instruction(Operation::Erase, 3));
+  program.add(1, Instruction(Operation::Branch, 2, 4));
+  program.add(2, Instruction(Operation::Mark, 3));
+  program.add(3, Instruction(Operation::Halt));
+  return program;
+}
+
+bool demonstrateProgram() {
+  Program program = makeExampleProgram();
+  const bool stored = program.size() == 4 && program.firstLabel() == 1 &&
+                      program.instructionAt(1) == Instruction(Operation::Branch, 2, 4);
+  program.replace(2, Instruction(Operation::Right, 3));
+  const bool replaced = program.instructionAt(2) == Instruction(Operation::Right, 3);
+  program.add(10, Instruction{});
+  const bool removed = program.remove(10) && !program.contains(10) && !program.remove(10);
+  std::stringstream state;
+  state << program;
+  Program restored;
+  state >> restored;
+  const bool serialized = static_cast<bool>(state) && restored == program;
+  std::cout << "Serialized program:\n" << program;
+  std::cout << "Program lookup, replacement and removal: "
+            << (stored && replaced && removed) << '\n';
+  std::cout << "Program stream round-trip preserves state: " << serialized << '\n';
+  return stored && replaced && removed && serialized;
+}
 } // namespace
 
 int main() {
@@ -247,7 +276,8 @@ int main() {
     const bool invalid = demonstrateInvalidInstruction();
     const bool serialization = demonstrateInstructionSerialization();
     const bool invalidInput = demonstrateInvalidInstructionInput();
-    return tape && instructions && copying && invalid && serialization && invalidInput
+    const bool program = demonstrateProgram();
+    return tape && instructions && copying && invalid && serialization && invalidInput && program
                ? 0 : 1;
   } catch (const std::exception &error) {
     std::cerr << "Error: " << error.what() << '\n';

@@ -15,6 +15,7 @@
    add_library(post_machine_core
        post_machine/src/Tape.cpp
        post_machine/src/Instruction.cpp
+       post_machine/src/Program.cpp
    )
 
    target_include_directories(post_machine_core PUBLIC
