@@ -5,44 +5,50 @@
 #include <cstdint>
 #include <iosfwd> //  std::istream и std::ostream без реализации
 
+/** @brief Шесть цветов кубика; порядок соответствует граням собранного состояния. */
 enum class Color { White, Yellow, Green, Blue, Orange, Red };
 
+/** @brief Грани кубика: верх, низ, перед, зад, левая, правая. */
 enum class Face { Up, Down, Front, Back, Left, Right };
 
+/** @brief Кубик 3x3 с фиксированными центрами и независимым копированием.
+ * Загрузка проверяет формат и количества цветов, но не полную физическую
+ * достижимость расстановки. Случайная игра создаётся UI через scramble().
+ */
 class RubiksCube {
-public:
-  /** @brief Создаёт собранный кубик. */
-  RubiksCube();
+  public:
+    /** @brief Создаёт собранный кубик. */
+    RubiksCube();
 
-  /** @brief Проверяет, одноцветна ли каждая грань. */
-  bool isSolved() const;
+    /** @brief Проверяет, одноцветна ли каждая грань. */
+    bool isSolved() const;
 
-  /** @brief Возвращает цвет клетки по грани, строке и столбцу.
-   *  @param face Грань кубика.
-   *  @param row Строка от 0 до 2.
-   *  @param column Столбец от 0 до 2.
-   *  @throws std::out_of_range Если грань или координаты недопустимы.
-   */
-  Color colorAt(Face face, std::size_t row, std::size_t column) const;
+    /** @brief Возвращает цвет клетки по грани, строке и столбцу.
+     *  @param face Грань кубика.
+     *  @param row Строка от 0 до 2.
+     *  @param column Столбец от 0 до 2.
+     *  @throws std::out_of_range Если грань или координаты недопустимы.
+     */
+    Color colorAt(Face face, std::size_t row, std::size_t column) const;
 
-  /** @brief Проверяет совпадение цветов всех соответствующих клеток. */
-  bool operator==(const RubiksCube &other) const;
+    /** @brief Проверяет совпадение цветов всех соответствующих клеток. */
+    bool operator==(const RubiksCube& other) const;
 
-  /** @brief Проверяет, различаются ли состояния кубиков. */
-  bool operator!=(const RubiksCube &other) const;
+    /** @brief Проверяет, различаются ли состояния кубиков. */
+    bool operator!=(const RubiksCube& other) const;
 
-  /** @brief Поворачивает переднюю грань по часовой стрелке
-   *  при взгляде прямо на неё.
-   */
-  void rotateFront();
+    /** @brief Поворачивает переднюю грань по часовой стрелке
+     *  при взгляде прямо на неё.
+     */
+    void rotateFront();
 
-  /** @brief Поворачивает выбранную грань по часовой стрелке
-   *  при взгляде прямо на неё.
-   *  @throws std::out_of_range Если значение грани недопустимо.
-   */
-  void rotate(Face face);
+    /** @brief Поворачивает выбранную грань по часовой стрелке
+     *  при взгляде прямо на неё.
+     *  @throws std::out_of_range Если значение грани недопустимо.
+     */
+    void rotate(Face face);
 
-  /** @brief Перемешивает текущее состояние случайными поворотами.
+    /** @brief Перемешивает текущее состояние случайными поворотами.
      *  @param moveCount Количество поворотов. Ноль не изменяет кубик.
      */
     void scramble(std::size_t moveCount);
@@ -56,49 +62,42 @@ public:
     /** @brief Записывает цвета шести граней в текстовый поток. */
     friend std::ostream& operator<<(std::ostream& output, const RubiksCube& cube);
 
-       /** @brief Читает состояние из потока.
-        *  При некорректных данных устанавливает failbit,
-        *  оставляя исходный кубик неизменным.
-        */
+    /** @brief Читает состояние из потока.
+     *  При некорректных данных устанавливает failbit,
+     *  оставляя исходный кубик неизменным.
+     */
     friend std::istream& operator>>(std::istream& input, RubiksCube& cube);
 
-private:
-  void rotateFaceClockwise(Face face);
+  private:
+    void rotateFaceClockwise(Face face);
 
-  static constexpr std::size_t kFaceCount = 6;
-  static constexpr std::size_t kSideLength = 3;
-  static constexpr std::size_t kCellsPerFace = kSideLength * kSideLength;
+    static constexpr std::size_t kFaceCount = 6;
+    static constexpr std::size_t kSideLength = 3;
+    static constexpr std::size_t kCellsPerFace = kSideLength * kSideLength;
 
-  static constexpr std::size_t kNeighborCount = 4;
+    static constexpr std::size_t kNeighborCount = 4;
 
-  static constexpr std::size_t kCenterIndex = kCellsPerFace / 2;
+    static constexpr std::size_t kCenterIndex = kCellsPerFace / 2;
 
     static constexpr std::array<Color, kFaceCount> kSolvedColors{
-        Color::White,
-        Color::Yellow,
-        Color::Green,
-        Color::Blue,
-        Color::Orange,
-        Color::Red
+        Color::White, Color::Yellow, Color::Green, Color::Blue, Color::Orange, Color::Red};
+
+    static constexpr std::array<char, kFaceCount> kColorSymbols{'W', 'Y', 'G', 'B', 'O', 'R'};
+
+    struct NeighborStrip {
+        Face face;
+        std::array<std::size_t, kSideLength> indices;
     };
 
-    static constexpr std::array<char, kFaceCount> kColorSymbols{
-        'W', 'Y', 'G', 'B', 'O', 'R'
-    };
+    using NeighborStrips = std::array<NeighborStrip, kNeighborCount>;
+    static const std::array<NeighborStrips, kFaceCount> kNeighborTable;
 
-  struct NeighborStrip {
-    Face face;
-    std::array<std::size_t, kSideLength> indices;
-  };
+    NeighborStrips neighborStripsFor(Face face) const;
+    void rotateNeighborStrips(const NeighborStrips& strips);
 
-  using NeighborStrips = std::array<NeighborStrip, kNeighborCount>;
+    static bool tryParseColor(char symbol, Color& color);
+    bool readState(std::istream& input);
+    bool hasValidColors() const;
 
-  NeighborStrips neighborStripsFor(Face face) const;
-  void rotateNeighborStrips(const NeighborStrips &strips);
-
-  static bool tryParseColor(char symbol, Color& color);
-     bool readState(std::istream& input);
-     bool hasValidColors() const;
-
-  std::array<std::array<Color, kCellsPerFace>, kFaceCount> faces_{};
+    std::array<std::array<Color, kCellsPerFace>, kFaceCount> faces_{};
 };
