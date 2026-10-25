@@ -13,7 +13,10 @@ enum class Operation {
     Halt    ///< Остановиться.
 };
 
-/** @brief Неизменяемое через публичный интерфейс описание одной команды. */
+/** @brief Одна команда: действие и номера переходов к следующим командам.
+ * Проверяет свои параметры при создании, но сама ничего не выполняет.
+ * Для изменения команды нужно заменить её целиком: сеттеров здесь нет.
+ */
 class Instruction {
   public:
     using Label = std::int64_t; ///< Положительный номер перехода, 0 — нет перехода.
@@ -37,10 +40,12 @@ class Instruction {
   private:
     bool hasValidArguments() const;
     Operation operation_;
+    // Это номера команд, а не координаты ленты. Для IF next_ — переход при пустой клетке.
     Label next_;
     Label nextIfMarked_;
 };
 
+// Для потоков хватает геттеров, конструктора и присваивания, поэтому friend не нужен.
 /** @brief Пишет MARK n, ERASE n, LEFT n, RIGHT n, IF n m либо HALT, без перевода строки. */
 std::ostream& operator<<(std::ostream& output, const Instruction& instruction);
 /** @brief Читает одну команду; при неверных данных ставит failbit и сохраняет объект.

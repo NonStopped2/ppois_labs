@@ -27,10 +27,12 @@ Program::Label Program::firstLabel() const {
         throw std::out_of_range("Program is empty");
     }
 
+    // map уже отсортирован: у первого элемента берём ключ, то есть номер команды.
     return instructions_.begin()->first;
 }
 
 const Instruction& Program::instructionAt(Label label) const {
+    // at() сообщает об отсутствующем номере исключением, а не добавляет новую команду.
     return instructions_.at(label);
 }
 
@@ -39,6 +41,7 @@ void Program::add(Label label, const Instruction& instruction) {
         throw std::invalid_argument("Instruction label must be positive and unique");
     }
 
+    // Здесь не требуем готовых переходов: нужную команду могут добавить позже.
     instructions_.emplace(label, instruction);
 }
 
@@ -47,6 +50,7 @@ void Program::replace(Label label, const Instruction& instruction) {
 }
 
 bool Program::remove(Label label) {
+    // erase возвращает число удалённых элементов. Остальные номера не сдвигаем.
     return instructions_.erase(label) != 0;
 }
 
@@ -75,6 +79,7 @@ std::istream& operator>>(std::istream& input, Program& program) {
         return input;
     }
 
+    // Собираем программу отдельно: add() заодно проверит положительность и уникальность.
     Program candidate;
     for (std::int64_t index = 0; index < instructionCount; ++index) {
         Program::Label label{};

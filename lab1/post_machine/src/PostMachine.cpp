@@ -6,6 +6,7 @@
 #include <string>
 
 namespace {
+// Проверяем, что сохранённая текущая команда и флаг остановки подходят к программе.
 bool readControlState(std::istream& input, const Program& program, PostMachine::Label& current,
                       bool& halted) {
     std::string currentKeyword;
@@ -19,11 +20,13 @@ bool readControlState(std::istream& input, const Program& program, PostMachine::
     if (program.empty()) {
         return current == 0 && !halted;
     }
+    // Остановленная машина должна стоять на HALT, а не на обычной команде.
     return program.contains(current) &&
            (!halted || program.instructionAt(current).operation() == Operation::Halt);
 }
 } // namespace
 
+// Ссылки нужны для передачи без лишней копии, но в полях сохраняются свои копии данных.
 PostMachine::PostMachine(const Program& program, const Tape& tape)
     : tape_(tape), program_(program), currentLabel_(program.empty() ? 0 : program.firstLabel()) {}
 
@@ -50,6 +53,7 @@ PostMachine::Label PostMachine::nextLabelFor(const Instruction& instruction) con
         next = instruction.nextIfMarked();
     }
 
+    // Проверяем только выбранный переход: другая ветка IF сейчас не выполняется.
     if (!program_.contains(next)) {
         throw std::runtime_error("Jump target does not exist");
     }
@@ -63,6 +67,7 @@ void PostMachine::applyOperation(Operation operation) {
     case Operation::Erase: tape_.erase(); break;
     case Operation::Left: tape_.moveLeft(); break;
     case Operation::Right: tape_.moveRight(); break;
+    // IF выбирает следующую команду, HALT останавливает: сами ленту они не меняют.
     case Operation::Branch:
     case Operation::Halt: break;
     }
@@ -79,11 +84,13 @@ bool PostMachine::step() {
 
     const Instruction& instruction = program_.instructionAt(currentLabel_);
 
+    // HALT тоже считается выполненным шагом; его номер оставляем текущим.
     if (instruction.operation() == Operation::Halt) {
         halted_ = true;
         return true;
     }
 
+    // Сначала проверяем переход, затем действие. При ошибке этот шаг не меняет машину.
     const Label next = nextLabelFor(instruction);
     applyOperation(instruction.operation());
     currentLabel_ = next;
@@ -99,8 +106,10 @@ std::size_t PostMachine::run(std::size_t maxSteps, std::ostream& log) {
 }
 
 std::size_t PostMachine::runImpl(std::size_t maxSteps, std::ostream* log) {
+    // Общий цикл для двух run(): nullptr означает, что журнал не нужен.
     std::size_t executed = 0;
     while (!halted_ && executed < maxSteps) {
+        // Запоминаем номер до шага: после него currentLabel_ уже может измениться.
         const Label executedLabel = currentLabel_;
         step();
         ++executed;
@@ -108,6 +117,7 @@ std::size_t PostMachine::runImpl(std::size_t maxSteps, std::ostream* log) {
             writeLog(*log, executedLabel);
         }
     }
+    // Лимит защищает от зацикливания. Сделанные шаги остаются, выполнение можно продолжить.
     if (!halted_) {
         throw std::runtime_error("Execution step limit reached");
     }
@@ -115,6 +125,7 @@ std::size_t PostMachine::runImpl(std::size_t maxSteps, std::ostream* log) {
 }
 
 void PostMachine::writeLog(std::ostream& log, Label executedLabel) const {
+    // Пишем состояние после успешного шага, в том числе после HALT.
     log << "EXECUTED " << executedLabel << '\n'
         << tape_ << "CURRENT " << currentLabel_ << "\nHALTED " << static_cast<int>(halted_)
         << "\n\n";
@@ -138,6 +149,8 @@ std::ostream& operator<<(std::ostream& output, const PostMachine& machine) {
 }
 
 std::istream& operator>>(std::istream& input, PostMachine& machine) {
+    // Снимок хранит не только ленту и программу, но и место продолжения исполнения.
+    // Заменяем машину только после проверки всех частей снимка.
     PostMachine candidate;
     if (!(input >> candidate.tape_ >> candidate.program_) ||
         !readControlState(input, candidate.program_, candidate.currentLabel_, candidate.halted_)) {

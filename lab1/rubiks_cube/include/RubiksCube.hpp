@@ -11,9 +11,10 @@ enum class Color { White, Yellow, Green, Blue, Orange, Red };
 /** @brief Грани кубика: верх, низ, перед, зад, левая, правая. */
 enum class Face { Up, Down, Front, Back, Left, Right };
 
-/** @brief Кубик 3x3 с фиксированными центрами и независимым копированием.
- * Загрузка проверяет формат и количества цветов, но не полную физическую
- * достижимость расстановки. Случайная игра создаётся UI через scramble().
+/** @brief Хранит цвета кубика 3x3 и умеет поворачивать его грани.
+ * Новый кубик собран; для случайной игры меню вызывает scramble(). Копии независимы.
+ * Центры фиксированы. Загрузка проверяет формат и количества цветов, но не то,
+ * можно ли получить расстановку настоящими поворотами кубика.
  */
 class RubiksCube {
   public:
@@ -84,6 +85,7 @@ class RubiksCube {
 
     static constexpr std::array<char, kFaceCount> kColorSymbols{'W', 'Y', 'G', 'B', 'O', 'R'};
 
+    // Одна соседняя полоса: на какой грани лежит и какие три клетки занимает.
     struct NeighborStrip {
         Face face;
         std::array<std::size_t, kSideLength> indices;
@@ -99,5 +101,6 @@ class RubiksCube {
     bool readState(std::istream& input);
     bool hasValidColors() const;
 
+    // Шесть граней по девять клеток. Внутри грани клетки идут по строкам от 0 до 8.
     std::array<std::array<Color, kCellsPerFace>, kFaceCount> faces_{};
 };

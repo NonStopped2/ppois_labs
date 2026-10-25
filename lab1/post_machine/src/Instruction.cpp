@@ -7,6 +7,7 @@
 #include <string>
 
 namespace {
+// Порядок имён совпадает с Operation: индекс связывает текст с действием.
 constexpr std::array<const char*, 6> kOperationNames{"MARK",  "ERASE", "LEFT",
                                                      "RIGHT", "IF",    "HALT"};
 
@@ -42,6 +43,8 @@ Instruction::Label Instruction::nextIfMarked() const {
 }
 
 bool Instruction::hasValidArguments() const {
+    // HALT не имеет переходов, IF имеет два, остальные команды — один.
+    // Наличие команды с таким номером в программе проверит уже исполнитель.
     switch (operation_) {
     case Operation::Halt: return next_ == 0 && nextIfMarked_ == 0;
 
@@ -90,6 +93,7 @@ std::istream& operator>>(std::istream& input, Instruction& instruction) {
         return input;
     }
 
+    // Читаем только нужное число переходов: после команды может идти следующий объект.
     Instruction::Label next{};
     Instruction::Label nextIfMarked{};
 
@@ -106,6 +110,7 @@ std::istream& operator>>(std::istream& input, Instruction& instruction) {
     }
 
     try {
+        // Конструктор сначала проверит параметры, и только потом заменим старую команду.
         instruction = Instruction(operation, next, nextIfMarked);
     } catch (const std::invalid_argument&) {
         input.setstate(std::ios::failbit);

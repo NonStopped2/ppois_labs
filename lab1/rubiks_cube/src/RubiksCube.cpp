@@ -29,6 +29,7 @@ Color RubiksCube::colorAt(Face face, std::size_t row, std::size_t column) const 
         throw std::out_of_range("Cube cell coordinates are out of range");
     }
 
+    // Переводим строку и столбец в индекс одномерного массива грани.
     const std::size_t cellIndex = row * kSideLength + column;
 
     return faces_[faceIndex][cellIndex];
@@ -44,11 +45,13 @@ bool RubiksCube::operator!=(const RubiksCube& other) const {
 
 void RubiksCube::rotateFaceClockwise(Face face) {
     const std::size_t faceIndex = static_cast<std::size_t>(face);
+    // Читаем из копии, чтобы новые цвета не затирали ещё не перенесённые старые.
     const auto previousFace = faces_[faceIndex];
 
     for (std::size_t row = 0; row < kSideLength; ++row) {
         for (std::size_t column = 0; column < kSideLength; ++column) {
             const std::size_t oldIndex = row * kSideLength + column;
+            // Поворот 3x3 по часовой: (строка, столбец) -> (столбец, 2 - строка).
             const std::size_t newRow = column;
             const std::size_t newColumn = kSideLength - 1 - row;
             const std::size_t newIndex = newRow * kSideLength + newColumn;
@@ -62,6 +65,8 @@ void RubiksCube::rotateFront() {
     rotate(Face::Front);
 }
 
+// Для каждой грани задаём четыре полосы соседей в порядке их переноса.
+// Обратный порядок индексов у некоторых полос учитывает, как повёрнуты соседние грани.
 const std::array<RubiksCube::NeighborStrips, RubiksCube::kFaceCount> RubiksCube::kNeighborTable{
     {NeighborStrips{{{Face::Front, {0, 1, 2}},
                      {Face::Left, {0, 1, 2}},
@@ -93,10 +98,12 @@ RubiksCube::NeighborStrips RubiksCube::neighborStripsFor(Face face) const {
 }
 
 void RubiksCube::rotateNeighborStrips(const NeighborStrips& strips) {
+    // Все полосы берём из одного старого состояния, а записываем уже в новое.
     const auto previousFaces = faces_;
 
     for (std::size_t stripIndex = 0; stripIndex < kNeighborCount; ++stripIndex) {
         const NeighborStrip& sourceStrip = strips[stripIndex];
+        // Остаток от деления замыкает круг: последняя полоса переходит в первую.
         const NeighborStrip& destinationStrip = strips[(stripIndex + 1) % kNeighborCount];
 
         const auto& sourceFace = previousFaces[static_cast<std::size_t>(sourceStrip.face)];
@@ -109,6 +116,7 @@ void RubiksCube::rotateNeighborStrips(const NeighborStrips& strips) {
     }
 }
 void RubiksCube::rotate(Face face) {
+    // at() внутри проверит номер грани до того, как мы начнём менять кубик.
     const NeighborStrips strips = neighborStripsFor(face);
 
     rotateFaceClockwise(face);
@@ -120,6 +128,7 @@ void RubiksCube::scramble(std::size_t moveCount) {
         return;
     }
 
+    // Без заданного seed получаем начальное значение генератора из random_device.
     std::random_device seedSource;
     const auto seed = static_cast<std::uint32_t>(seedSource());
 
@@ -127,6 +136,7 @@ void RubiksCube::scramble(std::size_t moveCount) {
 }
 
 void RubiksCube::scramble(std::size_t moveCount, std::uint32_t seed) {
+    // Одинаковый seed повторяет повороты в той же среде. Цвета отдельно не перемешиваем.
     std::mt19937 generator(seed);
     std::uniform_int_distribution<std::size_t> faceDistribution(0, kFaceCount - 1);
 
@@ -164,6 +174,7 @@ bool RubiksCube::readState(std::istream& input) {
 }
 
 bool RubiksCube::hasValidColors() const {
+    // Проверяем центры и по девять клеток каждого цвета, но не все правила сборки кубика.
     std::array<std::size_t, kFaceCount> colorCounts{};
 
     for (std::size_t faceIndex = 0; faceIndex < kFaceCount; ++faceIndex) {
@@ -188,6 +199,7 @@ bool RubiksCube::hasValidColors() const {
 }
 
 std::istream& operator>>(std::istream& input, RubiksCube& cube) {
+    // Старый кубик заменяем только после успешного чтения и проверки временного.
     RubiksCube candidate;
 
     if (!candidate.readState(input) || !candidate.hasValidColors()) {

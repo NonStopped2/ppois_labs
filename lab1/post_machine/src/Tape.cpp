@@ -24,6 +24,7 @@ bool Tape::currentCellMarked() const {
 }
 
 void Tape::setMarked(Position position, bool marked) {
+    // Это редактирование: повторно поставить или убрать то же значение можно.
     if (marked) {
         markedCells_.insert(position);
     } else {
@@ -36,6 +37,7 @@ void Tape::moveTo(Position position) {
 }
 
 void Tape::moveLeft() {
+    // Проверяем границу до вычитания, иначе знаковое число может переполниться.
     if (headPosition_ == std::numeric_limits<Position>::min()) {
         throw std::overflow_error("Tape position is below the supported range");
     }
@@ -44,6 +46,7 @@ void Tape::moveLeft() {
 }
 
 void Tape::moveRight() {
+    // Лента идёт в обе стороны, но её координаты ограничены диапазоном int64_t.
     if (headPosition_ == std::numeric_limits<Position>::max()) {
         throw std::overflow_error("Tape position exceeds the supported range");
     }
@@ -52,6 +55,7 @@ void Tape::moveRight() {
 }
 
 void Tape::mark() {
+    // Команда машины строже редактора: ставить метку поверх существующей нельзя.
     if (currentCellMarked()) {
         throw std::runtime_error("Cannot mark an already marked cell");
     }
@@ -60,6 +64,7 @@ void Tape::mark() {
 }
 
 void Tape::erase() {
+    // По правилам машины стираем только существующую метку.
     if (!currentCellMarked()) {
         throw std::runtime_error("Cannot erase an empty cell");
     }
@@ -68,6 +73,7 @@ void Tape::erase() {
 }
 
 bool Tape::operator==(const Tape& other) const {
+    // Одинаковых меток мало: положение каретки тоже является частью состояния.
     return headPosition_ == other.headPosition_ && markedCells_ == other.markedCells_;
 }
 
@@ -88,6 +94,7 @@ std::ostream& operator<<(std::ostream& output, const Tape& tape) {
 }
 
 std::istream& operator>>(std::istream& input, Tape& tape) {
+    // При неверном формате помечаем ошибку потока, но исходную ленту не меняем.
     Tape candidate;
     std::string headKeyword;
     std::string marksKeyword;
@@ -102,6 +109,7 @@ std::istream& operator>>(std::istream& input, Tape& tape) {
     for (std::int64_t index = 0; index < markCount; ++index) {
         Tape::Position position{};
 
+        // Повтор координаты считаем ошибкой файла, а не второй меткой в той же клетке.
         if (!(input >> position) || candidate.isMarked(position)) {
             input.setstate(std::ios::failbit);
             return input;

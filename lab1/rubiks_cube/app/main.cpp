@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 
+// Здесь диалог с пользователем и файлы. Сам RubiksCube ничего не знает о меню.
 namespace {
 constexpr std::size_t kSideLength = 3;
 constexpr std::size_t kQuarterTurnsPerCycle = 4;
@@ -27,6 +28,7 @@ RubiksCube createScrambledCube() {
     return cube;
 }
 
+// nullopt означает, что ввод закончился или не удался; меню тогда завершает работу.
 std::optional<std::string> readLine(const std::string& prompt) {
     std::cout << prompt;
     std::string line;
@@ -42,6 +44,7 @@ std::optional<std::size_t> readNumber(const std::string& prompt, std::size_t min
         std::istringstream parser(*line);
         long long number{};
         std::string extra;
+        // Принимаем одно целое число в диапазоне. Лишний текст вроде "2abc" не подходит.
         if ((parser >> number) && !(parser >> extra) && number >= static_cast<long long>(minimum) &&
             number <= static_cast<long long>(maximum)) {
             return static_cast<std::size_t>(number);
@@ -51,6 +54,7 @@ std::optional<std::size_t> readNumber(const std::string& prompt, std::size_t min
     return std::nullopt;
 }
 
+// Путь читаем целой строкой, поэтому пробелы в именах папок не мешают.
 std::optional<std::filesystem::path> readPath(const std::string& prompt) {
     while (const auto line = readLine(prompt)) {
         if (!line->empty()) {
@@ -120,6 +124,7 @@ std::optional<std::size_t> readTurnCount() {
     if (!direction) {
         return std::nullopt;
     }
+    // Три поворота по часовой дают один против часовой, отдельный алгоритм не нужен.
     return *direction == 1 ? 1 : kQuarterTurnsPerCycle - 1;
 }
 
@@ -158,6 +163,7 @@ void writeCube(const std::filesystem::path& path, const RubiksCube& cube) {
         throw std::runtime_error("Не удалось открыть файл для записи");
     }
     output << cube;
+    // Запись может дать ошибку при закрытии файла, поэтому проверяем поток и после close().
     output.close();
     if (!output) {
         throw std::runtime_error("Не удалось записать состояние кубика");
@@ -173,6 +179,7 @@ RubiksCube loadCube(const std::filesystem::path& path) {
     if (!(input >> cube)) {
         throw std::runtime_error("Некорректное состояние кубика в файле");
     }
+    // После состояния разрешены только пробелы, а не второй кубик или лишний текст.
     input >> std::ws;
     if (input.bad() || !input.eof()) {
         throw std::runtime_error("После состояния кубика найдены лишние данные");
@@ -180,6 +187,7 @@ RubiksCube loadCube(const std::filesystem::path& path) {
     return cube;
 }
 
+// Три результата: true — можно писать, false — отмена, nullopt — ввод закончился.
 std::optional<bool> confirmOverwrite(const std::filesystem::path& path) {
     if (!std::filesystem::exists(path)) {
         return true;
@@ -253,6 +261,7 @@ bool startNewGame(RubiksCube& cube) {
     return true;
 }
 
+// true оставляет меню открытым, false завершает его (выход или конец ввода).
 bool executeCommand(MenuCommand command, RubiksCube& cube) {
     switch (command) {
     case MenuCommand::Exit: return false;
@@ -281,6 +290,7 @@ void runMenu(RubiksCube& cube) {
                 break;
             }
         } catch (const std::exception& error) {
+            // Ошибка одного действия не закрывает игру: можно выбрать другую команду.
             std::cerr << "Ошибка: " << error.what() << '\n';
         }
     }
@@ -288,12 +298,14 @@ void runMenu(RubiksCube& cube) {
 }
 } // namespace
 
+// arguments[0] — путь программы, arguments[1], если есть, — файл кубика.
 int main(int argumentCount, char* arguments[]) {
     if (argumentCount > 2) {
         std::cerr << "Использование: " << arguments[0] << " [файл кубика]\n";
         return 1;
     }
     try {
+        // Файл загружаем как есть. Только запуск без файла создаёт случайную игру.
         RubiksCube cube = argumentCount == 2 ? loadCube(arguments[1]) : createScrambledCube();
         std::cout << "Цвета: W — белый, Y — жёлтый, G — зелёный, "
                      "B — синий, O — оранжевый, R — красный.\n";

@@ -11,7 +11,9 @@
 #include <stdexcept>
 #include <string>
 
+// Меню и файлы находятся здесь, а классы ленты, команд и машины отвечают за саму модель.
 namespace {
+// В файловом режиме лимит фиксирован, в меню пользователь выбирает его сам.
 constexpr std::size_t kDefaultStepLimit = 10000;
 constexpr std::int64_t kMaxInteractiveSteps = 1000000;
 
@@ -31,6 +33,7 @@ enum class Command {
     Save
 };
 
+// nullopt — ввод закончился или не удался. Это не число 0 и не пустая строка.
 std::optional<std::string> readLine(const std::string& prompt) {
     std::cout << prompt;
     std::string line;
@@ -46,6 +49,7 @@ std::optional<std::int64_t> readNumber(const std::string& prompt, std::int64_t m
         std::istringstream parser(*line);
         std::int64_t number{};
         std::string extra;
+        // Проверяем всю строку: одно целое число, без лишнего текста, в нужном диапазоне.
         if ((parser >> number) && !(parser >> extra) && number >= minimum && number <= maximum) {
             return number;
         }
@@ -54,6 +58,7 @@ std::optional<std::int64_t> readNumber(const std::string& prompt, std::int64_t m
     return std::nullopt;
 }
 
+// getline сохраняет пробелы внутри пути, в отличие от чтения через cin >> строка.
 std::optional<std::filesystem::path> readPath() {
     while (const auto line = readLine("Путь к файлу: ")) {
         if (!line->empty()) {
@@ -70,6 +75,7 @@ std::optional<Instruction> readInstruction() {
         std::istringstream parser(*line);
         Instruction instruction;
         if (parser >> instruction) {
+            // Оператор >> читает одну команду, а здесь ещё запрещаем лишние аргументы.
             parser >> std::ws;
             if (parser.eof()) {
                 return instruction;
@@ -95,6 +101,7 @@ void showMenu() {
                  "11. Загрузить состояние\n12. Сохранить состояние\n0. Выход\n";
 }
 
+// Учебный пример: пройти блок меток вправо и добавить метку в первую пустую клетку.
 PostMachine makeExampleMachine() {
     Program program;
     program.add(1, Instruction(Operation::Branch, 3, 2));
@@ -104,6 +111,7 @@ PostMachine makeExampleMachine() {
     return PostMachine(program);
 }
 
+// После редактирования начинаем с первой команды и обновляем снимок для перезапуска.
 void reconfigure(PostMachine& machine, PostMachine& initial, const Program& program,
                  const Tape& tape) {
     const PostMachine candidate(program, tape);
@@ -121,6 +129,7 @@ bool editInstruction(PostMachine& machine, PostMachine& initial, bool replace) {
     if (!instruction) {
         return false;
     }
+    // Правим копию: если номер не подходит, рабочая программа останется прежней.
     Program program = machine.program();
     if (replace) {
         program.replace(*label, *instruction);
@@ -221,6 +230,7 @@ PostMachine loadMachine(const std::filesystem::path& path) {
     if (!(input >> candidate)) {
         throw std::runtime_error("Некорректное состояние машины в файле");
     }
+    // Проверяем весь файл: после снимка допустимы только пробелы.
     input >> std::ws;
     if (input.bad() || !input.eof()) {
         throw std::runtime_error("После состояния машины найдены лишние данные");
@@ -234,6 +244,7 @@ bool loadFromMenu(PostMachine& machine, PostMachine& initial) {
         return false;
     }
     const PostMachine candidate = loadMachine(*path);
+    // Продолжаем с сохранённой команды, но перезапуск пойдёт с начала с загруженной лентой.
     const PostMachine start(candidate.program(), candidate.tape());
     machine = candidate;
     initial = start;
@@ -242,6 +253,7 @@ bool loadFromMenu(PostMachine& machine, PostMachine& initial) {
     return true;
 }
 
+// false означает отказ, nullopt — конец ввода. Это разные ситуации для меню.
 std::optional<bool> confirmOverwrite(const std::filesystem::path& path) {
     if (!std::filesystem::exists(path)) {
         return true;
@@ -262,6 +274,7 @@ void writeMachine(const std::filesystem::path& path, const PostMachine& machine)
         throw std::runtime_error("Не удалось открыть файл для записи");
     }
     output << machine;
+    // Проверяем и закрытие: ошибка записи может появиться только при сбросе буфера.
     output.close();
     if (!output) {
         throw std::runtime_error("Не удалось записать состояние машины");
@@ -286,6 +299,7 @@ bool saveFromMenu(const PostMachine& machine) {
     return true;
 }
 
+// true — продолжить меню, false — выйти. Отмена действия не обязательно означает выход.
 bool executeCommand(Command command, PostMachine& machine, PostMachine& initial) {
     switch (command) {
     case Command::Exit: return false;
@@ -306,6 +320,7 @@ bool executeCommand(Command command, PostMachine& machine, PostMachine& initial)
 }
 
 void runMenu(PostMachine& machine) {
+    // Этот снимок нужен для перезапуска. Обычные шаги меняют machine, но не initial.
     PostMachine initial(machine);
     while (true) {
         showMenu();
@@ -318,12 +333,14 @@ void runMenu(PostMachine& machine) {
                 break;
             }
         } catch (const std::exception& error) {
+            // Ошибка команды не закрывает меню; успешные предыдущие шаги сохраняются.
             std::cerr << "Ошибка: " << error.what() << '\n';
         }
     }
     std::cout << "Работа завершена.\n";
 }
 
+// Файловый запуск сразу выполняет программу и завершается, меню здесь не открываем.
 int runFile(const std::filesystem::path& path, bool logging) {
     PostMachine machine = loadMachine(path);
     const auto executed =
@@ -342,6 +359,7 @@ void showUsage(const char* executable) {
 }
 } // namespace
 
+// Первый аргумент — сама программа; дальше возможны файл и необязательный -log.
 int main(int argumentCount, char* arguments[]) {
     try {
         if (argumentCount == 2 && std::string(arguments[1]) == "--help") {
