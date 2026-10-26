@@ -9,6 +9,8 @@
 
 namespace post {
 
+// Один проверенный факт обработки отправления: вид, время, отделение и описание.
+// Проверяет состав события; порядок нескольких событий контролирует TrackingHistory.
 class TrackingEvent {
 public:
     TrackingEvent(std::int64_t sequence, TrackingEventKind kind,

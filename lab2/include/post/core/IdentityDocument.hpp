@@ -8,7 +8,8 @@
 
 namespace post {
 
-// Это проверка предъявленных данных, а не подлинности государственного документа.
+// Предъявленный документ для проверки владельца и срока действия при выдаче почты.
+// Проверяет введённые данные, а не подлинность государственного документа.
 class IdentityDocument {
 public:
     IdentityDocument(DocumentKind kind, const std::string& number, const std::string& holderName,

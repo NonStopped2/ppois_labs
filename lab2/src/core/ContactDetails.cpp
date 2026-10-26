@@ -15,10 +15,12 @@ constexpr std::size_t kMinimumPhoneDigits = 7;
 constexpr std::size_t kMaximumPhoneDigits = 15;
 constexpr std::string_view kEmailLocalSymbols = "._%+-";
 
+// Проверяет латинские ASCII-буквы без зависимости от системной локали.
 bool isAsciiLetter(char character) {
     return (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z');
 }
 
+// Убирает только разрешённые разделители: прочие ошибки должен заметить validatePhone.
 std::string normalizePhone(std::string_view phone) {
     std::string normalized;
     normalized.reserve(phone.size());
@@ -30,7 +32,9 @@ std::string normalizePhone(std::string_view phone) {
     return normalized;
 }
 
+// Проверяет учебный международный формат номера, а не его существование у оператора.
 void validatePhone(const std::string& phone) {
+    // Длина проверяется первой: короткое замыкание || защищает front() и обращение [1].
     if (phone.size() < kMinimumPhoneDigits + 1 || phone.size() > kMaximumPhoneDigits + 1 ||
         phone.front() != '+' || phone[1] == '0') {
         throw std::invalid_argument("Phone must start with '+' and contain 7 to 15 digits");
@@ -40,6 +44,7 @@ void validatePhone(const std::string& phone) {
     }
 }
 
+// Разрешает поддерживаемые символы до @, исключая крайние и последовательные точки.
 bool validLocalPart(std::string_view localPart) {
     if (localPart.empty() || localPart.front() == '.' || localPart.back() == '.' ||
         localPart.find("..") != std::string_view::npos) {
@@ -51,6 +56,7 @@ bool validLocalPart(std::string_view localPart) {
     });
 }
 
+// Проверяет доменные метки: нужна точка, недопустимы пустые метки и крайние дефисы.
 bool validDomain(std::string_view domain) {
     if (domain.empty() || domain.front() == '.' || domain.back() == '.' || domain.front() == '-' ||
         domain.back() == '-' || domain.find('.') == std::string_view::npos ||
@@ -65,11 +71,13 @@ bool validDomain(std::string_view domain) {
     });
 }
 
+// Разделяет адрес с единственным @ и проверяет обе части ограниченного формата.
 void validateEmail(const std::string& email) {
     const auto separator = email.find('@');
     if (separator == std::string::npos || separator != email.rfind('@')) {
         throw std::invalid_argument("Email must contain exactly one '@'");
     }
+    // string_view позволяет рассматривать части email без копирования строк.
     const std::string_view view(email);
     const auto localPart = view.substr(0, separator);
     const auto domain = view.substr(separator + 1);
@@ -79,6 +87,7 @@ void validateEmail(const std::string& email) {
     }
 }
 
+// Отклоняет неизвестные enum во всём списке, даже если подходящий канал уже есть.
 void validateChannels(const std::vector<ContactChannel>& channels) {
     const bool hasUnknown =
         std::any_of(channels.begin(), channels.end(), [](ContactChannel channel) {
@@ -91,6 +100,7 @@ void validateChannels(const std::vector<ContactChannel>& channels) {
 
 } // namespace
 
+// Сохраняет нормализованные контакты и проверяет доступность предпочтительного канала.
 ContactDetails::ContactDetails(const std::string& phone, std::optional<std::string> email,
                                ContactChannel preferredChannel)
     : phone_(normalizePhone(phone)), email_(std::move(email)), preferredChannel_(preferredChannel) {
@@ -100,18 +110,22 @@ ContactDetails::ContactDetails(const std::string& phone, std::optional<std::stri
     validate();
 }
 
+// Телефон уже приведён к виду '+' и цифры; вызывающему коду не нужна повторная очистка.
 const std::string& ContactDetails::phone() const noexcept {
     return phone_;
 }
 
+// Отсутствие email явно представлено nullopt, а не пустой строкой.
 const std::optional<std::string>& ContactDetails::email() const noexcept {
     return email_;
 }
 
+// Предпочтение клиента учитывается первым, но не заменяет проверку доступных каналов.
 ContactChannel ContactDetails::preferredChannel() const noexcept {
     return preferredChannel_;
 }
 
+// Определяет наличие данных для канала: телефон обязателен, email может отсутствовать.
 bool ContactDetails::supports(ContactChannel channel) const {
     switch (channel) {
     case ContactChannel::Phone:
@@ -122,6 +136,7 @@ bool ContactDetails::supports(ContactChannel channel) const {
     throw std::invalid_argument("Unknown contact channel");
 }
 
+// Проверяет контакты и не позволяет выбрать предпочтением отсутствующий email.
 void ContactDetails::validate() const {
     validatePhone(phone_);
     if (email_) {
@@ -132,6 +147,7 @@ void ContactDetails::validate() const {
     }
 }
 
+// Выбирает предпочтительный доступный канал либо первый поддерживаемый резервный.
 ContactChannel ContactDetails::selectChannel(const std::vector<ContactChannel>& available) const {
     // Проверяем весь список до выбора: ошибочный enum не должен остаться незамеченным.
     validateChannels(available);
@@ -139,6 +155,7 @@ ContactChannel ContactDetails::selectChannel(const std::vector<ContactChannel>& 
     if (preferred != available.end()) {
         return preferredChannel_;
     }
+    // Захват this даёт лямбде доступ к контактам текущего объекта через supports.
     const auto fallback =
         std::find_if(available.begin(), available.end(),
                      [this](ContactChannel channel) { return supports(channel); });

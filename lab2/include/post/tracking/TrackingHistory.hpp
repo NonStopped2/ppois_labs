@@ -10,6 +10,8 @@
 
 namespace post {
 
+// Владеет хронологическим журналом одного отправления и не допускает нарушения порядка.
+// По журналу определяет последнее отделение и длительность пребывания, не заменяя Shipment.
 class TrackingHistory {
 public:
     [[nodiscard]] const std::vector<TrackingEvent>& events() const noexcept;

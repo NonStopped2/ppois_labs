@@ -6,6 +6,7 @@
 
 namespace post {
 
+// Создаёт карточку с собственными копиями адреса и контактов, не ссылаясь на чужие объекты.
 Customer::Customer(const std::string& id, const std::string& fullName, const PostalAddress& address,
                    const ContactDetails& contacts)
     : id_(detail::normalizeText(id)), fullName_(detail::normalizeText(fullName)), address_(address),
@@ -17,18 +18,22 @@ Customer::Customer(const std::string& id, const std::string& fullName, const Pos
     // Контейнеры и строки сами управляют памятью: особый деструктор и копирование не нужны.
 }
 
+// Идентификатор для связи записей клиента; чтение не даёт возможности заменить ключ.
 const std::string& Customer::id() const noexcept {
     return id_;
 }
 
+// Нормализованное имя для оформления отправлений и сопоставления с документом.
 const std::string& Customer::fullName() const noexcept {
     return fullName_;
 }
 
+// Даёт доступ к собственному адресу клиента без копирования и без права его изменить.
 const PostalAddress& Customer::address() const noexcept {
     return address_;
 }
 
+// Контакты для выбора уведомления; ссылка const сохраняет проверенное состояние карточки.
 const ContactDetails& Customer::contacts() const noexcept {
     return contacts_;
 }

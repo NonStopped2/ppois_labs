@@ -8,6 +8,8 @@
 
 namespace post {
 
+// Условия отправки: проверяет совместимость опций для письма или посылки.
+// Определяет необходимые платные услуги без повторов, но сам не рассчитывает тариф.
 class DeliveryOptions {
 public:
     explicit DeliveryOptions(bool registered = false, Money declaredValue = Money{},

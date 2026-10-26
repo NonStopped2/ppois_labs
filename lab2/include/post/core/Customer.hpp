@@ -7,7 +7,8 @@
 
 namespace post {
 
-// Значения, а не указатели: копия клиента сохраняет собственный снимок данных.
+// Карточка отправителя или получателя: идентификатор, имя, адрес и контакты.
+// Владеет значениями, а не указателями: копия сохраняет собственный снимок данных.
 class Customer {
 public:
     Customer(const std::string& id, const std::string& fullName, const PostalAddress& address,

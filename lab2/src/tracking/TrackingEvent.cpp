@@ -10,6 +10,7 @@
 namespace post {
 namespace {
 
+// Даже enum может содержать неизвестное значение после static_cast: проверяем явно.
 bool supportedKind(TrackingEventKind kind) {
     constexpr std::array kinds{
         TrackingEventKind::Accepted,       TrackingEventKind::PreparedForDispatch,
@@ -22,11 +23,13 @@ bool supportedKind(TrackingEventKind kind) {
     return std::find(kinds.begin(), kinds.end(), kind) != kinds.end();
 }
 
+// Сообщение, отмена и утрата допускаются без привязки к конкретному отделению.
 bool requiresBranch(TrackingEventKind kind) {
     return kind != TrackingEventKind::Information && kind != TrackingEventKind::Cancelled &&
            kind != TrackingEventKind::Lost;
 }
 
+// Для сообщения и проблемного исхода одного вида события недостаточно: нужно объяснение.
 bool requiresDescription(TrackingEventKind kind) {
     return kind == TrackingEventKind::DeliveryFailed || kind == TrackingEventKind::Information ||
            kind == TrackingEventKind::Cancelled || kind == TrackingEventKind::Lost;
@@ -34,6 +37,7 @@ bool requiresDescription(TrackingEventKind kind) {
 
 } // namespace
 
+// Нормализует текст и создаёт событие только с допустимым составом данных.
 TrackingEvent::TrackingEvent(std::int64_t sequence, TrackingEventKind kind,
                              std::chrono::sys_seconds occurredAt,
                              std::optional<std::string> branchId, const std::string& description)
@@ -45,32 +49,39 @@ TrackingEvent::TrackingEvent(std::int64_t sequence, TrackingEventKind kind,
     validate();
 }
 
+// Порядковый номер внутри истории, а не трек-номер самого отправления.
 std::int64_t TrackingEvent::sequence() const noexcept {
     return sequence_;
 }
 
+// Вид факта определяет обязательные данные и его влияние на учёт местоположения.
 TrackingEventKind TrackingEvent::kind() const noexcept {
     return kind_;
 }
 
+// Явно переданное время факта в секундах Unix, а не время чтения объекта.
 std::chrono::sys_seconds TrackingEvent::occurredAt() const noexcept {
     return occurredAt_;
 }
 
+// optional сохраняет различие между известным отделением и допустимым отсутствием места.
 const std::optional<std::string>& TrackingEvent::branchId() const noexcept {
     return branchId_;
 }
 
+// Пояснение для журнала: в частности, причина неудачной доставки, отмены или утраты.
 const std::string& TrackingEvent::description() const noexcept {
     return description_;
 }
 
+// Проверяет отдельный факт; хронологию относительно других событий проверяет история.
 void TrackingEvent::validate() const {
     // Неотрицательные метки позволяют безопасно вычитать и суммировать интервалы.
     if (sequence_ <= 0 || !supportedKind(kind_) || occurredAt_ < std::chrono::sys_seconds{}) {
         throw InvalidShipmentDataException(
             "Event requires a positive sequence, known kind and nonnegative Unix time");
     }
+    // optional разыменовывается только после проверки наличия значения через &&.
     if ((requiresBranch(kind_) && !branchId_) ||
         (branchId_ &&
          (!detail::hasPrintableText(*branchId_) || branchId_->find(' ') != std::string::npos))) {

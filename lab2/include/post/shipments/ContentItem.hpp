@@ -8,6 +8,8 @@
 
 namespace post {
 
+// Одна позиция описи содержимого: количество, масса и ценность единицы.
+// Даёт проверенные итоги для оценки содержимого и отклоняет запрещённую категорию.
 class ContentItem {
 public:
     ContentItem(const std::string& name, std::int64_t quantity, std::int64_t unitWeightGrams,

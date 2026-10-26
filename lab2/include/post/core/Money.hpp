@@ -1,11 +1,13 @@
 #pragma once
 
-#include <compare>
+// Тип результата сгенерированного operator<=> требует этот заголовок.
+#include <compare> // IWYU pragma: keep
 #include <cstdint>
 
 namespace post {
 
-// Неотрицательная сумма BYN. Целые копейки исключают ошибки округления double.
+// Денежная сумма для стоимости содержимого и почтовых услуг.
+// Хранит неотрицательные копейки BYN и проверяет арифметику без округления double.
 class Money {
 public:
     explicit Money(std::int64_t kopecks = 0);

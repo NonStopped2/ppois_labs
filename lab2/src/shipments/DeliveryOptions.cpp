@@ -4,6 +4,8 @@
 
 namespace post {
 
+// Проверяет общие зависимости опций; ограничения вида отправления проверяются отдельно.
+// Регистрация и проверка документа включаются совместно, ценность и уведомление требуют их.
 DeliveryOptions::DeliveryOptions(bool registered, Money declaredValue, bool identityCheckRequired,
                                  bool courierDelivery, bool fragile, bool notificationRequired)
     : registered_(registered), declaredValue_(declaredValue),
@@ -16,30 +18,37 @@ DeliveryOptions::DeliveryOptions(bool registered, Money declaredValue, bool iden
     }
 }
 
+// Признак регистрации нужен для выбора платной услуги и зависимых условий.
 bool DeliveryOptions::registered() const noexcept {
     return registered_;
 }
 
+// Ценность отправления для услуги оценки; ноль означает отсутствие объявленной ценности.
 const Money& DeliveryOptions::declaredValue() const noexcept {
     return declaredValue_;
 }
 
+// Требование проверки получателя; отдельная платная услуга за него не добавляется.
 bool DeliveryOptions::identityCheckRequired() const noexcept {
     return identityCheckRequired_;
 }
 
+// Выбор доставки курьером вместо обычной выдачи в отделении.
 bool DeliveryOptions::courierDelivery() const noexcept {
     return courierDelivery_;
 }
 
+// Признак специальной обработки хрупкого, разрешённой только для посылок.
 bool DeliveryOptions::fragile() const noexcept {
     return fragile_;
 }
 
+// Требование уведомления о вручении для включения соответствующей услуги в расчёт.
 bool DeliveryOptions::notificationRequired() const noexcept {
     return notificationRequired_;
 }
 
+// Проверяет условия для конкретного вида: письму недоступны курьер и хрупкая обработка.
 void DeliveryOptions::validateCombination(ShipmentKind kind) const {
     if (kind != ShipmentKind::Letter && kind != ShipmentKind::Parcel) {
         throw IncompatibleServiceException("Unknown shipment kind");
@@ -50,6 +59,7 @@ void DeliveryOptions::validateCombination(ShipmentKind kind) const {
     }
 }
 
+// Готовит набор услуг для тарификации, а не рассчитывает или списывает деньги.
 std::vector<ServiceKind> DeliveryOptions::requiredServices() const {
     std::vector<ServiceKind> services;
     // Каждое условие добавляет свою услугу один раз; проверка документа уже включена.

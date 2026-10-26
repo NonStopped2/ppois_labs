@@ -8,6 +8,7 @@
 
 namespace post {
 
+// Нормализует пробелы и создаёт только адрес, прошедший проверку обязательных частей.
 PostalAddress::PostalAddress(const std::string& postalCode, const std::string& locality,
                              const std::string& street, const std::string& building,
                              std::optional<std::string> apartment)
@@ -20,28 +21,35 @@ PostalAddress::PostalAddress(const std::string& postalCode, const std::string& l
     validate();
 }
 
+// Индекс для маршрутизации: строковое представление сохраняет ведущие нули.
 const std::string& PostalAddress::postalCode() const noexcept {
     return postalCode_;
 }
 
+// Нормализованный населённый пункт для адресной строки, без изменения регистра.
 const std::string& PostalAddress::locality() const noexcept {
     return locality_;
 }
 
+// Название улицы уже без лишних пробелов; наружу доступно только для чтения.
 const std::string& PostalAddress::street() const noexcept {
     return street_;
 }
 
+// Дом представлен строкой, поскольку его обозначение может содержать буквы и корпус.
 const std::string& PostalAddress::building() const noexcept {
     return building_;
 }
 
+// optional отличает адрес без квартиры от адреса с указанным номером.
 const std::optional<std::string>& PostalAddress::apartment() const noexcept {
     return apartment_;
 }
 
+// Проверяет структуру адреса, но не существование дома в реальном справочнике.
 void PostalAddress::validate() const {
     constexpr std::size_t postalCodeLength = 6;
+    // all_of требует ASCII-цифру на каждой позиции, а не просто подходящую длину.
     const bool correctIndex =
         postalCode_.size() == postalCodeLength &&
         std::all_of(postalCode_.begin(), postalCode_.end(), detail::isAsciiDigit);
@@ -58,7 +66,9 @@ void PostalAddress::validate() const {
     }
 }
 
+// Сравнивает точку доставки по всем адресным полям; имя получателя сюда не входит.
 bool PostalAddress::sameDeliveryPointAs(const PostalAddress& other) const noexcept {
+    // *this — текущий адрес; default operator== сравнивает все его поля.
     return *this == other;
 }
 
