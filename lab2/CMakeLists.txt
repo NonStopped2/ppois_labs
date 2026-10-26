@@ -4,6 +4,11 @@ add_library(post_domain
     src/core/PostalAddress.cpp
     src/core/ContactDetails.cpp
     src/core/Customer.cpp
+    src/core/IdentityDocument.cpp
+    src/shipments/ContentItem.cpp
+    src/shipments/DeliveryOptions.cpp
+    src/tracking/TrackingEvent.cpp
+    src/tracking/TrackingHistory.cpp
     src/detail/Text.cpp
 )
 target_include_directories(post_domain PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -51,6 +56,11 @@ if(BUILD_TESTING)
         tests/core/PostalAddressTests.cpp
         tests/core/ContactDetailsTests.cpp
         tests/core/CustomerTests.cpp
+        tests/core/IdentityDocumentTests.cpp
+        tests/shipments/ContentItemTests.cpp
+        tests/shipments/DeliveryOptionsTests.cpp
+        tests/tracking/TrackingEventTests.cpp
+        tests/tracking/TrackingHistoryTests.cpp
     )
     target_link_libraries(post_core_tests PRIVATE post_domain Catch2::Catch2WithMain)
 
