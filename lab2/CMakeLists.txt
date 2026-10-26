@@ -1,0 +1,60 @@
+add_library(post_domain
+    src/core/Money.cpp
+    src/core/Dimensions.cpp
+    src/core/PostalAddress.cpp
+    src/core/ContactDetails.cpp
+    src/core/Customer.cpp
+    src/detail/Text.cpp
+)
+target_include_directories(post_domain PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_compile_features(post_domain PUBLIC cxx_std_20)
+if(MSVC)
+    target_compile_options(post_domain PRIVATE /W4)
+else()
+    target_compile_options(post_domain PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+option(LAB2_ENABLE_COVERAGE "Instrument lab2 with Clang/LLVM coverage" OFF)
+option(LAB2_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer for lab2" OFF)
+
+if(LAB2_ENABLE_COVERAGE)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        message(FATAL_ERROR "LAB2_ENABLE_COVERAGE requires Clang or AppleClang")
+    endif()
+    # PUBLIC propagates instrumentation to lab2 consumers, but not to Catch2 itself.
+    target_compile_options(post_domain PUBLIC -fprofile-instr-generate -fcoverage-mapping)
+    target_link_options(post_domain PUBLIC -fprofile-instr-generate)
+endif()
+
+if(LAB2_ENABLE_SANITIZERS)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        message(FATAL_ERROR "LAB2_ENABLE_SANITIZERS requires Clang or GCC")
+    endif()
+    target_compile_options(post_domain PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(post_domain PUBLIC -fsanitize=address,undefined)
+endif()
+
+if(BUILD_TESTING)
+    include(FetchContent)
+    if(POLICY CMP0135)
+        cmake_policy(SET CMP0135 NEW)
+    endif()
+    FetchContent_Declare(Catch2
+        URL https://codeload.github.com/catchorg/Catch2/tar.gz/refs/tags/v3.8.1
+        URL_HASH SHA256=18b3f70ac80fccc340d8c6ff0f339b2ae64944782f8d2fca2bd705cf47cadb79
+    )
+    FetchContent_MakeAvailable(Catch2)
+
+    add_executable(post_core_tests
+        tests/core/MoneyTests.cpp
+        tests/core/DimensionsTests.cpp
+        tests/core/PostalAddressTests.cpp
+        tests/core/ContactDetailsTests.cpp
+        tests/core/CustomerTests.cpp
+    )
+    target_link_libraries(post_core_tests PRIVATE post_domain Catch2::Catch2WithMain)
+
+    list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
+    include(Catch)
+    catch_discover_tests(post_core_tests TEST_PREFIX "lab2." PROPERTIES LABELS "lab2")
+endif()
