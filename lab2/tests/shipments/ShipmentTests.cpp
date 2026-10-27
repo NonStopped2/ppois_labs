@@ -26,8 +26,8 @@ bool allowed(Status status, Event event) {
     case Status::Draft:
         return event == Event::Accepted || event == Event::Cancelled;
     case Status::Accepted:
-        return event == Event::PreparedForDispatch || event == Event::ReturnStarted ||
-               event == Event::Lost;
+        return event == Event::PreparedForDispatch || event == Event::AwaitingPickup ||
+               event == Event::ReturnStarted || event == Event::Lost;
     case Status::PreparedForDispatch:
         return event == Event::Dispatched || event == Event::ReturnStarted || event == Event::Lost;
     case Status::InTransit:

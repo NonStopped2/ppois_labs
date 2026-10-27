@@ -11,6 +11,8 @@ enum class BranchOperation {
     ManageShift,
     DeliverShipment,
     DriveVehicle,
-    InvestigateShipment
+    InvestigateShipment,
+    ApproveCompensation,
+    ManageCash
 };
 } // namespace post

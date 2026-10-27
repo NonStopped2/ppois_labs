@@ -330,7 +330,7 @@ TEST_CASE("PostalBranch rolls back tracking exhaustion between preparation and d
     REQUIRE(registry.at(id).status() == ShipmentStatus::Accepted);
     REQUIRE_THROWS_AS(detail::lastOperationalFact(test::letter()), InvalidShipmentStateException);
 }
-TEST_CASE("PostalBranch tries compatible areas and issues an already arrived local shipment",
+TEST_CASE("PostalBranch tries compatible areas and issues local mail without a transportation loop",
           "[postal-branch]") {
     const StorageArea fragile("fragile", "Хрупкое", StorageAreaKind::Fragile,
                               {StorageCell("fragile-cell", 1000, 10, Dimensions(1000, 1000, 1000))},
@@ -343,11 +343,7 @@ TEST_CASE("PostalBranch tries compatible areas and issues an already arrived loc
     test::accept(branch, registry, id);
     REQUIRE(branch.storageAreas().front().cells().front().entries().empty());
     REQUIRE(branch.storageAreas().back().cells().front().entries().size() == 1);
-    // Подготовка допустимого состояния Arrived через низкоуровневый автомат для проверки выдачи.
-    detail::appendFact(registry.at(id), TrackingEventKind::PreparedForDispatch, test::moment(16),
-                       "A");
-    detail::appendFact(registry.at(id), TrackingEventKind::Dispatched, test::moment(17), "A");
-    detail::appendFact(registry.at(id), TrackingEventKind::Arrived, test::moment(18), "A");
+    REQUIRE(registry.at(id).status() == ShipmentStatus::AwaitingPickup);
     branch.issueShipment(registry, id, "worker", registry.at(id).recipient(), test::document(),
                          test::moment(25));
     REQUIRE(registry.at(id).status() == ShipmentStatus::Delivered);

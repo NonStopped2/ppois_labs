@@ -1,7 +1,7 @@
 #include "post/branches/PostalBranch.hpp"
+#include "post/detail/DeliveryChecks.hpp"
 #include "post/detail/PostalPrefixes.hpp"
 #include "post/detail/ShipmentFacts.hpp"
-#include "post/detail/Time.hpp"
 #include "post/exceptions/DeliveryAuthorizationException.hpp"
 #include "post/exceptions/PaymentException.hpp"
 #include "post/exceptions/ShipmentNotFoundException.hpp"
@@ -12,21 +12,6 @@
 
 namespace post {
 namespace {
-// Подпись получателя или представителя проверяется до подготовки складских изменений.
-void validateClaimant(const Shipment& shipment, const Customer& claimant,
-                      const IdentityDocument& document, const PickupAuthorization* authorization,
-                      std::chrono::sys_seconds time) {
-    const auto& principal =
-        shipment.status() == ShipmentStatus::Returning ? shipment.sender() : shipment.recipient();
-    if (claimant.id() == principal.id()) {
-        document.validateForHolder(principal.fullName(), detail::dateAt(time));
-    } else {
-        if (!authorization) {
-            throw DeliveryAuthorizationException("Representative needs pickup authorization");
-        }
-        authorization->validateFor(shipment, principal, claimant, document, time);
-    }
-}
 // Дата партии и пломб ограничивает фактическое выбытие, но не навязывает часы операционной системы.
 void requireDepartureTime(const DispatchBatch& batch, std::chrono::sys_seconds time) {
     detail::requireTime(time);
@@ -254,6 +239,9 @@ void PostalBranch::acceptShipment(ShipmentRegistry& registry, const Invoice& inv
     auto areas = storageAreas_;
     auto& shipment = staged.at(trackingNumber);
     detail::appendFact(shipment, TrackingEventKind::Accepted, time, id_);
+    if (serves(shipment.recipient().address())) {
+        detail::appendFact(shipment, TrackingEventKind::AwaitingPickup, time, id_);
+    }
     placeIn(areas, shipment, policy, time);
     commit(registry, std::move(staged), storageAreas_, std::move(areas));
 }
@@ -332,7 +320,7 @@ void PostalBranch::issueShipment(ShipmentRegistry& registry, const std::string& 
     if (!serves(principal.address())) {
         throw DeliveryAuthorizationException("Pickup belongs to another service area");
     }
-    validateClaimant(original, claimant, document, authorization, time);
+    detail::validateRecipient(original, claimant, document, authorization, time);
     auto staged = registry;
     auto areas = storageAreas_;
     auto& shipment = staged.at(trackingNumber);
@@ -375,6 +363,40 @@ void PostalBranch::confirmLoss(ShipmentRegistry& registry, const std::string& tr
     }
     detail::appendFact(staged.at(trackingNumber), TrackingEventKind::Lost, time, id_,
                        "Утрата подтверждена розыском");
+    commit(registry, std::move(staged), storageAreas_, std::move(areas));
+}
+// Передача курьеру освобождает ячейку только вместе с фактом OutForDelivery.
+void PostalBranch::sendForDelivery(ShipmentRegistry& registry, const std::string& trackingNumber,
+                                   const std::string& employeeId, std::chrono::sys_seconds time) {
+    authorize(employeeId, BranchOperation::DeliverShipment, time);
+    const auto& original = registry.at(trackingNumber);
+    requireStored(original);
+    if (!original.options().courierDelivery() || !serves(original.recipient().address())) {
+        throw DeliveryAuthorizationException("Courier service unavailable at this branch");
+    }
+    auto staged = registry;
+    auto areas = storageAreas_;
+    detail::appendFact(staged.at(trackingNumber), TrackingEventKind::OutForDelivery, time, id_);
+    takeFrom(areas, trackingNumber);
+    commit(registry, std::move(staged), storageAreas_, std::move(areas));
+}
+// Неудача сама не возвращает груз: сначала фиксируется физическое прибытие и новое размещение.
+void PostalBranch::returnFromCourier(ShipmentRegistry& registry, const std::string& trackingNumber,
+                                     const std::string& employeeId, const StoragePolicy& policy,
+                                     std::chrono::sys_seconds time) {
+    authorize(employeeId, BranchOperation::DeliverShipment, time);
+    const auto& original = registry.at(trackingNumber);
+    if (original.history().lastKnownBranch() != id_ ||
+        original.status() != ShipmentStatus::OutForDelivery ||
+        detail::lastOperationalFact(original) != TrackingEventKind::DeliveryFailed) {
+        throw InvalidShipmentStateException("Shipment has no failed courier attempt here");
+    }
+    auto staged = registry;
+    auto areas = storageAreas_;
+    auto& shipment = staged.at(trackingNumber);
+    detail::appendFact(shipment, TrackingEventKind::Arrived, time, id_);
+    detail::appendFact(shipment, TrackingEventKind::AwaitingPickup, time, id_);
+    placeIn(areas, shipment, policy, time);
     commit(registry, std::move(staged), storageAreas_, std::move(areas));
 }
 } // namespace post

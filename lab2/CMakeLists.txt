@@ -42,6 +42,11 @@ add_library(post_domain
     src/transport/TransportTrip.cpp
     src/transport/TransportManifest.cpp
     src/returns/SearchRequest.cpp
+    src/delivery/Courier.cpp
+    src/delivery/DeliveryRoute.cpp
+    src/delivery/DeliveryTask.cpp
+    src/returns/CompensationClaim.cpp
+    src/payments/CashRegister.cpp
     src/tracking/TrackingEvent.cpp
     src/tracking/TrackingHistory.cpp
     src/detail/Text.cpp
@@ -129,6 +134,11 @@ if(BUILD_TESTING)
         tests/transport/TransportTripTests.cpp
         tests/transport/TransportManifestTests.cpp
         tests/returns/SearchRequestTests.cpp
+        tests/delivery/CourierTests.cpp
+        tests/delivery/DeliveryRouteTests.cpp
+        tests/delivery/DeliveryTaskTests.cpp
+        tests/returns/CompensationClaimTests.cpp
+        tests/payments/CashRegisterTests.cpp
         tests/tracking/TrackingEventTests.cpp
         tests/tracking/TrackingHistoryTests.cpp
     )

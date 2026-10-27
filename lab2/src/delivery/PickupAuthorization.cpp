@@ -60,9 +60,9 @@ void PickupAuthorization::validateFor(const Shipment& shipment, const Customer& 
                                       std::chrono::sys_seconds time) const {
     detail::requireTime(time);
     const auto state = shipment.status();
-    const bool issuable = state == ShipmentStatus::Arrived ||
-                          state == ShipmentStatus::AwaitingPickup ||
-                          state == ShipmentStatus::Returning;
+    const bool issuable =
+        state == ShipmentStatus::Arrived || state == ShipmentStatus::AwaitingPickup ||
+        state == ShipmentStatus::OutForDelivery || state == ShipmentStatus::Returning;
     if (revokedAt_ || !issuable || shipment.trackingNumber() != shipmentId_ ||
         principal.id() != principalCustomerId_ || principal.id() != principalFor(shipment).id() ||
         representative.id() != representativeCustomerId_ || time < validFrom_ ||

@@ -48,6 +48,12 @@ public:
 private:
     friend class ReturnRequest;
     friend class SearchRequest;
+    friend class Courier;
+    void sendForDelivery(ShipmentRegistry& registry, const std::string& trackingNumber,
+                         const std::string& employeeId, std::chrono::sys_seconds time);
+    void returnFromCourier(ShipmentRegistry& registry, const std::string& trackingNumber,
+                           const std::string& employeeId, const StoragePolicy& policy,
+                           std::chrono::sys_seconds time);
     void confirmLoss(ShipmentRegistry& registry, const std::string& trackingNumber,
                      const std::string& employeeId, std::chrono::sys_seconds time);
     void beginReturn(ShipmentRegistry& registry, const std::string& trackingNumber,

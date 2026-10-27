@@ -21,6 +21,7 @@ constexpr std::array kTransitions{
     std::tuple{Status::Draft, Event::Accepted, Status::Accepted},
     std::tuple{Status::Draft, Event::Cancelled, Status::Cancelled},
     std::tuple{Status::Accepted, Event::PreparedForDispatch, Status::PreparedForDispatch},
+    std::tuple{Status::Accepted, Event::AwaitingPickup, Status::AwaitingPickup},
     std::tuple{Status::PreparedForDispatch, Event::Dispatched, Status::InTransit},
     std::tuple{Status::InTransit, Event::Arrived, Status::Arrived},
     std::tuple{Status::Arrived, Event::PreparedForDispatch, Status::PreparedForDispatch},
