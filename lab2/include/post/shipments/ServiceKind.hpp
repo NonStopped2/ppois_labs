@@ -8,7 +8,8 @@ enum class ServiceKind {
     DeclaredValue,
     CourierDelivery,
     FragileHandling,
-    DeliveryNotification
+    DeliveryNotification,
+    BasePostage
 };
 
 } // namespace post

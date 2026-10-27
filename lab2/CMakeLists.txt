@@ -7,6 +7,11 @@ add_library(post_domain
     src/core/IdentityDocument.cpp
     src/shipments/ContentItem.cpp
     src/shipments/DeliveryOptions.cpp
+    src/shipments/Shipment.cpp
+    src/shipments/Letter.cpp
+    src/shipments/Parcel.cpp
+    src/registry/ShipmentRegistry.cpp
+    src/payments/InvoiceLine.cpp
     src/tracking/TrackingEvent.cpp
     src/tracking/TrackingHistory.cpp
     src/detail/Text.cpp
@@ -59,6 +64,11 @@ if(BUILD_TESTING)
         tests/core/IdentityDocumentTests.cpp
         tests/shipments/ContentItemTests.cpp
         tests/shipments/DeliveryOptionsTests.cpp
+        tests/shipments/ShipmentTests.cpp
+        tests/shipments/LetterTests.cpp
+        tests/shipments/ParcelTests.cpp
+        tests/registry/ShipmentRegistryTests.cpp
+        tests/payments/InvoiceLineTests.cpp
         tests/tracking/TrackingEventTests.cpp
         tests/tracking/TrackingHistoryTests.cpp
     )
