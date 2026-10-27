@@ -14,14 +14,14 @@ namespace {
 // Виды событий, которые начинают новый интервал нахождения в отделении.
 bool entersBranch(TrackingEventKind kind) {
     return kind == TrackingEventKind::Accepted || kind == TrackingEventKind::Arrived ||
-           kind == TrackingEventKind::AwaitingPickup || kind == TrackingEventKind::Returned;
+           kind == TrackingEventKind::AwaitingPickup;
 }
 
 // Виды событий, завершающие интервал: выбытие, вручение, отмена или утрата.
 bool leavesBranch(TrackingEventKind kind) {
     return kind == TrackingEventKind::Dispatched || kind == TrackingEventKind::OutForDelivery ||
-           kind == TrackingEventKind::Delivered || kind == TrackingEventKind::Cancelled ||
-           kind == TrackingEventKind::Lost;
+           kind == TrackingEventKind::Delivered || kind == TrackingEventKind::Returned ||
+           kind == TrackingEventKind::Cancelled || kind == TrackingEventKind::Lost;
 }
 
 // Ищет конец одного пребывания; информационные события не закрывают интервал.

@@ -123,8 +123,8 @@ TEST_CASE("TrackingHistory measures repeated stays and open intervals", "[tracki
     history.append(TrackingEvent(7, TrackingEventKind::AwaitingPickup, at(100), "B"));
     history.append(TrackingEvent(8, TrackingEventKind::ReturnStarted, at(110), "B"));
     history.append(TrackingEvent(9, TrackingEventKind::Dispatched, at(120), "B"));
-    history.append(TrackingEvent(10, TrackingEventKind::Returned, at(140), "A"));
-    history.append(TrackingEvent(11, TrackingEventKind::Delivered, at(160), "A"));
+    history.append(TrackingEvent(10, TrackingEventKind::Arrived, at(140), "A"));
+    history.append(TrackingEvent(11, TrackingEventKind::Returned, at(160), "A"));
     REQUIRE(history.timeSpentAt("A", at(0)) == 0s);
     REQUIRE(history.timeSpentAt("A", at(10)) == 0s);
     REQUIRE(history.timeSpentAt("A", at(20)) == 10s);
@@ -152,6 +152,18 @@ TEST_CASE("TrackingHistory stops stays on cancellation or loss without a branch"
     }
 }
 
+TEST_CASE("TrackingHistory terminal return closes a stay rather than starting one",
+          "[tracking_history]") {
+    TrackingHistory history;
+    history.append(accepted(1, 0));
+    history.append(TrackingEvent(2, TrackingEventKind::ReturnStarted, at(10), "A"));
+    history.append(TrackingEvent(3, TrackingEventKind::Returned, at(20), "A"));
+    REQUIRE(history.timeSpentAt("A", at(19)) == 19s);
+    REQUIRE(history.timeSpentAt("A", at(20)) == 20s);
+    REQUIRE(history.timeSpentAt("A", at(100)) == 20s);
+    REQUIRE(history.lastKnownBranch() == std::optional<std::string>{"A"});
+}
+
 TEST_CASE("TrackingHistory matches independent interval formulas at every second",
           "[tracking_history]") {
     TrackingHistory history;
@@ -160,7 +172,7 @@ TEST_CASE("TrackingHistory matches independent interval formulas at every second
     history.append(TrackingEvent(3, TrackingEventKind::Dispatched, at(10), "A"));
     history.append(TrackingEvent(4, TrackingEventKind::Arrived, at(20), "B"));
     history.append(TrackingEvent(5, TrackingEventKind::OutForDelivery, at(30), "B"));
-    history.append(TrackingEvent(6, TrackingEventKind::Returned, at(35), "A"));
+    history.append(TrackingEvent(6, TrackingEventKind::Arrived, at(35), "A"));
     history.append(TrackingEvent(7, TrackingEventKind::Arrived, at(40), "B"));
     history.append(TrackingEvent(8, TrackingEventKind::Lost, at(45), std::nullopt, "Утрата"));
     // Эталон: A=[0,10)+[35,40), B=[20,30)+[40,45), без повторения алгоритма обхода.

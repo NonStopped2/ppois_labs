@@ -32,6 +32,11 @@ add_library(post_domain
     src/sorting/SortingRule.cpp
     src/sorting/SortingPlan.cpp
     src/delivery/PickupAuthorization.cpp
+    src/delivery/DeliveryAttempt.cpp
+    src/sorting/MailBag.cpp
+    src/sorting/DispatchBatch.cpp
+    src/branches/PostalBranch.cpp
+    src/returns/ReturnRequest.cpp
     src/tracking/TrackingEvent.cpp
     src/tracking/TrackingHistory.cpp
     src/detail/Text.cpp
@@ -109,6 +114,11 @@ if(BUILD_TESTING)
         tests/sorting/SortingRuleTests.cpp
         tests/sorting/SortingPlanTests.cpp
         tests/delivery/PickupAuthorizationTests.cpp
+        tests/delivery/DeliveryAttemptTests.cpp
+        tests/sorting/MailBagTests.cpp
+        tests/sorting/DispatchBatchTests.cpp
+        tests/branches/PostalBranchTests.cpp
+        tests/returns/ReturnRequestTests.cpp
         tests/tracking/TrackingEventTests.cpp
         tests/tracking/TrackingHistoryTests.cpp
     )
