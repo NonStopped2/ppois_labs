@@ -22,6 +22,11 @@ add_library(post_domain
     src/payments/Refund.cpp
     src/payments/Invoice.cpp
     src/storage/StoragePolicy.cpp
+    src/storage/StorageEntry.cpp
+    src/storage/StorageCell.cpp
+    src/storage/StorageArea.cpp
+    src/transport/RouteStop.cpp
+    src/transport/PostalRoute.cpp
     src/tracking/TrackingEvent.cpp
     src/tracking/TrackingHistory.cpp
     src/detail/Text.cpp
@@ -89,6 +94,11 @@ if(BUILD_TESTING)
         tests/payments/RefundTests.cpp
         tests/payments/InvoiceTests.cpp
         tests/storage/StoragePolicyTests.cpp
+        tests/storage/StorageEntryTests.cpp
+        tests/storage/StorageCellTests.cpp
+        tests/storage/StorageAreaTests.cpp
+        tests/transport/RouteStopTests.cpp
+        tests/transport/PostalRouteTests.cpp
         tests/tracking/TrackingEventTests.cpp
         tests/tracking/TrackingHistoryTests.cpp
     )
