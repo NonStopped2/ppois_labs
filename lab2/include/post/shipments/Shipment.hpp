@@ -40,6 +40,9 @@ public:
     void revise(std::int64_t newWeightGrams, const DeliveryOptions& newOptions);
 
 protected:
+    // Копия-снимок допустима, но присваивание не должно подменять личность объекта в реестре.
+    Shipment(const Shipment& other) = default;
+    Shipment& operator=(const Shipment& other) = delete;
     Shipment(const Customer& sender, const Customer& recipient, std::int64_t weightGrams,
              const DeliveryOptions& options);
     void requireDraft() const;

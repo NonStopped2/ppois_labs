@@ -17,6 +17,11 @@ add_library(post_domain
     src/tariffs/ServiceRate.cpp
     src/tariffs/TariffPlan.cpp
     src/tariffs/PostageQuote.cpp
+    src/tariffs/PostageCalculator.cpp
+    src/payments/Payment.cpp
+    src/payments/Refund.cpp
+    src/payments/Invoice.cpp
+    src/storage/StoragePolicy.cpp
     src/tracking/TrackingEvent.cpp
     src/tracking/TrackingHistory.cpp
     src/detail/Text.cpp
@@ -79,6 +84,11 @@ if(BUILD_TESTING)
         tests/tariffs/ServiceRateTests.cpp
         tests/tariffs/TariffPlanTests.cpp
         tests/tariffs/PostageQuoteTests.cpp
+        tests/tariffs/PostageCalculatorTests.cpp
+        tests/payments/PaymentTests.cpp
+        tests/payments/RefundTests.cpp
+        tests/payments/InvoiceTests.cpp
+        tests/storage/StoragePolicyTests.cpp
         tests/tracking/TrackingEventTests.cpp
         tests/tracking/TrackingHistoryTests.cpp
     )

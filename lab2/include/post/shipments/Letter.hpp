@@ -9,6 +9,8 @@ public:
     Letter(const Customer& sender, const Customer& recipient, std::int64_t weightGrams,
            const DeliveryOptions& options, const Dimensions& envelope, std::int64_t sheetCount,
            const std::string& contentsDescription);
+    // Явная копия также подавляет неявное перемещение, способное опустошить объект реестра.
+    Letter(const Letter& other) = default;
     [[nodiscard]] ShipmentKind kind() const noexcept override;
     [[nodiscard]] const Dimensions& dimensions() const noexcept override;
     [[nodiscard]] const Dimensions& envelope() const noexcept;

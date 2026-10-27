@@ -8,6 +8,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <limits>
 #include <set>
+#include <type_traits>
+#include <utility>
 
 using namespace post;
 using namespace std::chrono;
@@ -104,6 +106,24 @@ void checkTransition(Status status, Event event) {
 }
 } // namespace
 
+TEST_CASE("Shipment identity cannot be replaced through base or product assignment", "[shipment]") {
+    STATIC_REQUIRE_FALSE(std::is_copy_assignable_v<Shipment>);
+    STATIC_REQUIRE_FALSE(std::is_copy_assignable_v<Letter>);
+    STATIC_REQUIRE_FALSE(std::is_copy_assignable_v<Parcel>);
+    STATIC_REQUIRE(std::is_copy_constructible_v<Letter>);
+    STATIC_REQUIRE(std::is_copy_constructible_v<Parcel>);
+    ShipmentRegistry registry("BY");
+    const auto id = registry.registerShipment(test::parcel(), 1000, Dimensions(500, 500, 500), 10);
+    auto& original = dynamic_cast<Parcel&>(registry.at(id));
+    const auto contents = original.contents();
+    Parcel snapshot(std::move(original));
+    REQUIRE(original.contents() == contents);
+    REQUIRE(original.sealId() == "seal-1");
+    REQUIRE(original.trackingNumber() == id);
+    snapshot.revise(600, DeliveryOptions{});
+    REQUIRE(original.weightGrams() == 500);
+    REQUIRE(snapshot.weightGrams() == 600);
+}
 TEST_CASE("Shipment checks every state/event pair atomically", "[shipment]") {
     for (int status = 0; status <= static_cast<int>(Status::Lost); ++status) {
         for (int event = 0; event <= static_cast<int>(Event::Information); ++event) {

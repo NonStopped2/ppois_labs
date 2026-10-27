@@ -17,29 +17,31 @@ using Status = ShipmentStatus;
 using Event = TrackingEventKind;
 
 // Таблица перечисляет только разрешённые переходы, а не произвольные пары состояний.
+constexpr std::array kTransitions{
+    std::tuple{Status::Draft, Event::Accepted, Status::Accepted},
+    std::tuple{Status::Draft, Event::Cancelled, Status::Cancelled},
+    std::tuple{Status::Accepted, Event::PreparedForDispatch, Status::PreparedForDispatch},
+    std::tuple{Status::PreparedForDispatch, Event::Dispatched, Status::InTransit},
+    std::tuple{Status::InTransit, Event::Arrived, Status::Arrived},
+    std::tuple{Status::Arrived, Event::PreparedForDispatch, Status::PreparedForDispatch},
+    std::tuple{Status::Arrived, Event::OutForDelivery, Status::OutForDelivery},
+    std::tuple{Status::Arrived, Event::AwaitingPickup, Status::AwaitingPickup},
+    std::tuple{Status::AwaitingPickup, Event::OutForDelivery, Status::OutForDelivery},
+    std::tuple{Status::AwaitingPickup, Event::Delivered, Status::Delivered},
+    std::tuple{Status::OutForDelivery, Event::Delivered, Status::Delivered},
+    std::tuple{Status::OutForDelivery, Event::DeliveryFailed, Status::OutForDelivery},
+    std::tuple{Status::OutForDelivery, Event::Arrived, Status::Arrived},
+    std::tuple{Status::Accepted, Event::ReturnStarted, Status::Returning},
+    std::tuple{Status::PreparedForDispatch, Event::ReturnStarted, Status::Returning},
+    std::tuple{Status::Arrived, Event::ReturnStarted, Status::Returning},
+    std::tuple{Status::AwaitingPickup, Event::ReturnStarted, Status::Returning},
+    std::tuple{Status::Returning, Event::PreparedForDispatch, Status::Returning},
+    std::tuple{Status::Returning, Event::Dispatched, Status::Returning},
+    std::tuple{Status::Returning, Event::Arrived, Status::Returning},
+    std::tuple{Status::Returning, Event::Returned, Status::Returned}};
+
+// Справочная таблица отделена от короткого алгоритма выбора и проверки перехода.
 Status transition(Status current, Event event) {
-    static constexpr std::array rules{
-        std::tuple{Status::Draft, Event::Accepted, Status::Accepted},
-        std::tuple{Status::Draft, Event::Cancelled, Status::Cancelled},
-        std::tuple{Status::Accepted, Event::PreparedForDispatch, Status::PreparedForDispatch},
-        std::tuple{Status::PreparedForDispatch, Event::Dispatched, Status::InTransit},
-        std::tuple{Status::InTransit, Event::Arrived, Status::Arrived},
-        std::tuple{Status::Arrived, Event::PreparedForDispatch, Status::PreparedForDispatch},
-        std::tuple{Status::Arrived, Event::OutForDelivery, Status::OutForDelivery},
-        std::tuple{Status::Arrived, Event::AwaitingPickup, Status::AwaitingPickup},
-        std::tuple{Status::AwaitingPickup, Event::OutForDelivery, Status::OutForDelivery},
-        std::tuple{Status::AwaitingPickup, Event::Delivered, Status::Delivered},
-        std::tuple{Status::OutForDelivery, Event::Delivered, Status::Delivered},
-        std::tuple{Status::OutForDelivery, Event::DeliveryFailed, Status::OutForDelivery},
-        std::tuple{Status::OutForDelivery, Event::Arrived, Status::Arrived},
-        std::tuple{Status::Accepted, Event::ReturnStarted, Status::Returning},
-        std::tuple{Status::PreparedForDispatch, Event::ReturnStarted, Status::Returning},
-        std::tuple{Status::Arrived, Event::ReturnStarted, Status::Returning},
-        std::tuple{Status::AwaitingPickup, Event::ReturnStarted, Status::Returning},
-        std::tuple{Status::Returning, Event::PreparedForDispatch, Status::Returning},
-        std::tuple{Status::Returning, Event::Dispatched, Status::Returning},
-        std::tuple{Status::Returning, Event::Arrived, Status::Returning},
-        std::tuple{Status::Returning, Event::Returned, Status::Returned}};
     if (event == Event::Information) {
         return current;
     }
@@ -47,10 +49,11 @@ Status transition(Status current, Event event) {
         current != Status::Returned && current != Status::Cancelled && current != Status::Lost) {
         return Status::Lost;
     }
-    const auto found = std::find_if(rules.begin(), rules.end(), [current, event](const auto& rule) {
-        return std::get<0>(rule) == current && std::get<1>(rule) == event;
-    });
-    if (found == rules.end()) {
+    const auto found =
+        std::find_if(kTransitions.begin(), kTransitions.end(), [current, event](const auto& rule) {
+            return std::get<0>(rule) == current && std::get<1>(rule) == event;
+        });
+    if (found == kTransitions.end()) {
         throw InvalidShipmentStateException("Forbidden shipment transition");
     }
     return std::get<2>(*found);
@@ -71,6 +74,15 @@ void validateReturnLeg(const TrackingHistory& history, Event next) {
     if (!valid) {
         throw InvalidShipmentStateException("Invalid phase of return transportation");
     }
+}
+
+// Завершение возврата привязано к первому приёму, а не к любому последнему отделению.
+bool atOrigin(const TrackingHistory& history, const TrackingEvent& event) {
+    const auto& facts = history.events();
+    const auto origin = std::find_if(facts.begin(), facts.end(), [](const auto& fact) {
+        return fact.kind() == Event::Accepted;
+    });
+    return origin != facts.end() && origin->branchId() == event.branchId();
 }
 
 // Прибытие задаёт новое место; прочие локальные действия относятся к последнему известному.
@@ -187,13 +199,8 @@ void Shipment::validateEventContext(const TrackingEvent& event) const {
     if (needsCurrentBranch(event.kind()) && event.branchId() != history_.lastKnownBranch()) {
         throw InvalidShipmentStateException("Event refers to another branch");
     }
-    if (event.kind() == Event::Returned) {
-        const auto origin =
-            std::find_if(history_.events().begin(), history_.events().end(),
-                         [](const auto& fact) { return fact.kind() == Event::Accepted; });
-        if (origin == history_.events().end() || origin->branchId() != event.branchId()) {
-            throw InvalidShipmentStateException("Return must finish at the acceptance branch");
-        }
+    if (event.kind() == Event::Returned && !atOrigin(history_, event)) {
+        throw InvalidShipmentStateException("Return must finish at the acceptance branch");
     }
 }
 

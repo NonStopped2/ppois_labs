@@ -86,6 +86,8 @@ std::string ShipmentRegistry::registerShipment(const Shipment& prototype,
 }
 // Изменяемая ссылка даёт право вызвать только проверяемые операции Shipment.
 Shipment& ShipmentRegistry::at(const std::string& trackingNumber) {
+    // Исходный реестр неконстантный, поэтому снятие const безопасно.
+    // Общая реализация позволяет не дублировать поиск.
     return const_cast<Shipment&>(std::as_const(*this).at(trackingNumber));
 }
 // Поиск охватывает архив: перенос не делает трек-номер неизвестным.

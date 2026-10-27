@@ -13,6 +13,8 @@ public:
     Parcel(const Customer& sender, const Customer& recipient, std::int64_t weightGrams,
            const DeliveryOptions& options, const Dimensions& dimensions,
            PackagingKind packagingKind);
+    // Снимки копируются, а не забирают опись и пломбу у зарегистрированного оригинала.
+    Parcel(const Parcel& other) = default;
     [[nodiscard]] ShipmentKind kind() const noexcept override;
     [[nodiscard]] const Dimensions& dimensions() const noexcept override;
     [[nodiscard]] const std::vector<ContentItem>& contents() const noexcept;
