@@ -79,6 +79,24 @@ if(LAB2_ENABLE_SANITIZERS)
     target_link_options(post_domain PUBLIC -fsanitize=address,undefined)
 endif()
 
+add_library(post_ui
+    app/Console.cpp
+    app/Defaults.cpp
+    app/Display.cpp
+    app/Application.cpp
+)
+target_include_directories(post_ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/app")
+target_link_libraries(post_ui PUBLIC post_domain)
+add_executable(post_cli app/main.cpp)
+target_link_libraries(post_cli PRIVATE post_ui)
+foreach(target post_ui post_cli)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endforeach()
+
 if(BUILD_TESTING)
     include(FetchContent)
     if(POLICY CMP0135)
@@ -147,4 +165,16 @@ if(BUILD_TESTING)
     list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
     include(Catch)
     catch_discover_tests(post_core_tests TEST_PREFIX "lab2." PROPERTIES LABELS "lab2")
+
+    add_executable(post_ui_tests tests/cli/ConsoleTests.cpp tests/cli/ApplicationTests.cpp)
+    target_link_libraries(post_ui_tests PRIVATE post_ui Catch2::Catch2WithMain)
+    catch_discover_tests(post_ui_tests TEST_PREFIX "lab2-ui." PROPERTIES LABELS "lab2-ui")
+
+    find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME lab2-cli.scenarios
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/cli_tests.py" "$<TARGET_FILE:post_cli>")
+    set_tests_properties(lab2-cli.scenarios PROPERTIES LABELS "lab2-cli" TIMEOUT 120)
+    add_test(NAME lab2-tools.coverage
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/test_coverage.py")
+    set_tests_properties(lab2-tools.coverage PROPERTIES LABELS "lab2-tools")
 endif()
