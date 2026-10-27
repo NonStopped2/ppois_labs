@@ -97,6 +97,21 @@ foreach(target post_ui post_cli)
     endif()
 endforeach()
 
+install(TARGETS post_cli RUNTIME DESTINATION bin COMPONENT lab2)
+install(FILES README.md CLI.md BEHAVIORS.md CI.md DESTINATION share/ppois_lab2 COMPONENT lab2)
+install(DIRECTORY examples/ DESTINATION share/ppois_lab2/examples COMPONENT lab2
+    FILES_MATCHING PATTERN "*.input")
+
+find_package(Doxygen QUIET)
+if(DOXYGEN_FOUND)
+    configure_file(Doxyfile.in "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile" @ONLY)
+    add_custom_target(lab2_docs
+        COMMAND "${DOXYGEN_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Generate lab2 HTML documentation"
+        VERBATIM)
+endif()
+
 if(BUILD_TESTING)
     include(FetchContent)
     if(POLICY CMP0135)
@@ -177,4 +192,7 @@ if(BUILD_TESTING)
     add_test(NAME lab2-tools.coverage
         COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/test_coverage.py")
     set_tests_properties(lab2-tools.coverage PROPERTIES LABELS "lab2-tools")
+    add_test(NAME lab2-tools.infrastructure
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/test_infrastructure.py")
+    set_tests_properties(lab2-tools.infrastructure PROPERTIES LABELS "lab2-tools")
 endif()

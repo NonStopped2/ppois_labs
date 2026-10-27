@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Black-box CLI checks; domain unit tests remain separate C++ Catch2 tests."""
+import argparse
 import subprocess
 import sys
 import unittest
 from pathlib import Path
 
-EXECUTABLE = Path(sys.argv.pop(1)).resolve() if len(sys.argv) > 1 else None
+EXECUTABLE = None
+EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples"
 
 
 def command(section, action, *fields):
@@ -42,7 +44,7 @@ class CliTests(unittest.TestCase):
         return completed.stdout + completed.stderr
 
     def test_documented_replay_examples(self):
-        examples = Path(__file__).resolve().parents[1] / "examples"
+        examples = EXAMPLES_DIR
         for name, expected in (("transport", "Letter | Delivered"),
                                ("courier", "Parcel | Delivered"), ("loss", "Letter | Lost")):
             fields = (examples / f"{name}.input").read_text(encoding="utf-8").splitlines()
@@ -170,6 +172,12 @@ class CliTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    if EXECUTABLE is None or not EXECUTABLE.is_file():
-        raise SystemExit("Usage: python3 lab2/tools/cli_tests.py /path/to/post_cli")
-    unittest.main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("executable", type=Path)
+    parser.add_argument("--examples-dir", type=Path, default=EXAMPLES_DIR)
+    arguments, test_arguments = parser.parse_known_args()
+    EXECUTABLE = arguments.executable.resolve()
+    EXAMPLES_DIR = arguments.examples_dir.resolve()
+    if not EXECUTABLE.is_file():
+        parser.error(f"Missing executable: {EXECUTABLE}")
+    unittest.main(argv=[sys.argv[0], *test_arguments])
