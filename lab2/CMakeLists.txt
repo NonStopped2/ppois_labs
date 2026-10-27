@@ -27,6 +27,11 @@ add_library(post_domain
     src/storage/StorageArea.cpp
     src/transport/RouteStop.cpp
     src/transport/PostalRoute.cpp
+    src/personnel/Employee.cpp
+    src/personnel/WorkShift.cpp
+    src/sorting/SortingRule.cpp
+    src/sorting/SortingPlan.cpp
+    src/delivery/PickupAuthorization.cpp
     src/tracking/TrackingEvent.cpp
     src/tracking/TrackingHistory.cpp
     src/detail/Text.cpp
@@ -99,6 +104,11 @@ if(BUILD_TESTING)
         tests/storage/StorageAreaTests.cpp
         tests/transport/RouteStopTests.cpp
         tests/transport/PostalRouteTests.cpp
+        tests/personnel/EmployeeTests.cpp
+        tests/personnel/WorkShiftTests.cpp
+        tests/sorting/SortingRuleTests.cpp
+        tests/sorting/SortingPlanTests.cpp
+        tests/delivery/PickupAuthorizationTests.cpp
         tests/tracking/TrackingEventTests.cpp
         tests/tracking/TrackingHistoryTests.cpp
     )
