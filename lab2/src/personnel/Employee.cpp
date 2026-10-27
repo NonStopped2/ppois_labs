@@ -21,7 +21,8 @@ bool permitted(EmployeeRole role, BranchOperation operation) {
     case EmployeeRole::Driver:
         return operation == BranchOperation::DriveVehicle;
     case EmployeeRole::Inspector:
-        return operation == BranchOperation::InspectVehicle;
+        return operation == BranchOperation::InspectVehicle ||
+               operation == BranchOperation::InvestigateShipment;
     default:
         return false;
     }
@@ -66,7 +67,8 @@ const std::string& Employee::suspensionReason() const noexcept {
 // Не принимает весь PostalBranch: проверке действительно нужен только его идентификатор.
 void Employee::authorize(BranchOperation operation, const std::string& targetBranchId) const {
     const auto target = detail::identifier(targetBranchId);
-    if (operation < BranchOperation::StartShift || operation > BranchOperation::DriveVehicle) {
+    if (operation < BranchOperation::StartShift ||
+        operation > BranchOperation::InvestigateShipment) {
         throw std::invalid_argument("Unknown branch operation");
     }
     if (!active_ || target != branchId_ || !permitted(role_, operation)) {

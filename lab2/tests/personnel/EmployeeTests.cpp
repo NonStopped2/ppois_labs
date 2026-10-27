@@ -17,14 +17,15 @@ bool expected(EmployeeRole role, BranchOperation operation) {
         {EmployeeRole::Sorter, BranchOperation::ReceiveBatch},
         {EmployeeRole::Courier, BranchOperation::DeliverShipment},
         {EmployeeRole::Driver, BranchOperation::DriveVehicle},
-        {EmployeeRole::Inspector, BranchOperation::InspectVehicle}};
+        {EmployeeRole::Inspector, BranchOperation::InspectVehicle},
+        {EmployeeRole::Inspector, BranchOperation::InvestigateShipment}};
     return allowed.contains({role, operation});
 }
 } // namespace
 TEST_CASE("Employee checks all role and operation combinations", "[employee]") {
     for (int role = 0; role <= static_cast<int>(EmployeeRole::Manager); ++role) {
         const auto employee = test::employee("w", "A", static_cast<EmployeeRole>(role));
-        for (int op = 0; op <= static_cast<int>(BranchOperation::DriveVehicle); ++op) {
+        for (int op = 0; op <= static_cast<int>(BranchOperation::InvestigateShipment); ++op) {
             const auto operation = static_cast<BranchOperation>(op);
             if (expected(employee.role(), operation)) {
                 REQUIRE_NOTHROW(employee.authorize(operation, " A "));

@@ -357,4 +357,24 @@ void PostalBranch::beginReturn(ShipmentRegistry& registry, const std::string& tr
                        "Разрешён возврат отправителю");
     registry = std::move(staged);
 }
+// Только завершённый розыск может подтвердить утрату и освободить оставшуюся учётную запись.
+void PostalBranch::confirmLoss(ShipmentRegistry& registry, const std::string& trackingNumber,
+                               const std::string& employeeId, std::chrono::sys_seconds time) {
+    authorize(employeeId, BranchOperation::InvestigateShipment, time);
+    const auto& original = registry.at(trackingNumber);
+    if (original.history().lastKnownBranch() != id_) {
+        throw InvalidShipmentStateException("Loss belongs to another branch");
+    }
+    auto staged = registry;
+    auto areas = storageAreas_;
+    if (std::any_of(areas.begin(), areas.end(), [&trackingNumber](const auto& area) {
+            return area.contains(trackingNumber);
+        })) {
+        requireStored(original);
+        takeFrom(areas, trackingNumber);
+    }
+    detail::appendFact(staged.at(trackingNumber), TrackingEventKind::Lost, time, id_,
+                       "Утрата подтверждена розыском");
+    commit(registry, std::move(staged), storageAreas_, std::move(areas));
+}
 } // namespace post

@@ -47,6 +47,9 @@ public:
 
 private:
     friend class ReturnRequest;
+    friend class SearchRequest;
+    void confirmLoss(ShipmentRegistry& registry, const std::string& trackingNumber,
+                     const std::string& employeeId, std::chrono::sys_seconds time);
     void beginReturn(ShipmentRegistry& registry, const std::string& trackingNumber,
                      const std::string& employeeId, std::chrono::sys_seconds time);
     void validateConfiguration() const;

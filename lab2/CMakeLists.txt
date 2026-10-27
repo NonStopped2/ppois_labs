@@ -37,6 +37,11 @@ add_library(post_domain
     src/sorting/DispatchBatch.cpp
     src/branches/PostalBranch.cpp
     src/returns/ReturnRequest.cpp
+    src/transport/Vehicle.cpp
+    src/transport/VehicleInspection.cpp
+    src/transport/TransportTrip.cpp
+    src/transport/TransportManifest.cpp
+    src/returns/SearchRequest.cpp
     src/tracking/TrackingEvent.cpp
     src/tracking/TrackingHistory.cpp
     src/detail/Text.cpp
@@ -119,6 +124,11 @@ if(BUILD_TESTING)
         tests/sorting/DispatchBatchTests.cpp
         tests/branches/PostalBranchTests.cpp
         tests/returns/ReturnRequestTests.cpp
+        tests/transport/VehicleTests.cpp
+        tests/transport/VehicleInspectionTests.cpp
+        tests/transport/TransportTripTests.cpp
+        tests/transport/TransportManifestTests.cpp
+        tests/returns/SearchRequestTests.cpp
         tests/tracking/TrackingEventTests.cpp
         tests/tracking/TrackingHistoryTests.cpp
     )
