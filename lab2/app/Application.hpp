@@ -56,6 +56,9 @@ private:
     void issue();
     void authorizePickup();
     void revokeAuthorization();
+    [[nodiscard]] DispatchBatch prepareBatch(const std::string& id, const PostalBranch& source,
+                                             const PostalBranch& target, const Vehicle& vehicle,
+                                             const std::vector<std::string>& ids) const;
     void prepareTrip();
     void departTrip();
     void arriveTrip();
@@ -66,6 +69,8 @@ private:
     void startDelivery();
     void attemptDelivery();
     void finishDelivery();
+    void cancelDelivery();
+    void interruptDelivery();
     void retryDelivery();
     void listDelivery();
     void submitReturn();
@@ -84,6 +89,7 @@ private:
     void renewShifts();
     void addBreak();
     void configuration();
+    void showShifts();
 
     Console& console_;
     std::chrono::sys_seconds now_{kEpoch};

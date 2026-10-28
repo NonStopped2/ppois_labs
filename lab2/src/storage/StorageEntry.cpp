@@ -1,17 +1,13 @@
 #include "post/storage/StorageEntry.hpp"
+#include "post/detail/ShipmentFacts.hpp"
 #include "post/detail/Validation.hpp"
-#include "post/exceptions/InvalidShipmentStateException.hpp"
 #include <algorithm>
 
 namespace post {
 namespace {
 // В пути, у курьера и после завершения объект не должен занимать ячейку отделения.
 void requireStorable(const Shipment& shipment, std::chrono::sys_seconds time) {
-    const auto state = shipment.status();
-    if (shipment.trackingNumber().empty() ||
-        (state != ShipmentStatus::Accepted && state != ShipmentStatus::PreparedForDispatch &&
-         state != ShipmentStatus::Arrived && state != ShipmentStatus::AwaitingPickup &&
-         state != ShipmentStatus::Returning)) {
+    if (shipment.trackingNumber().empty() || !detail::availableForBranchStorage(shipment)) {
         throw InvalidShipmentStateException("Shipment is not available for branch storage");
     }
     if (!shipment.history().events().empty() &&

@@ -3,6 +3,37 @@
 #include <catch2/catch_test_macros.hpp>
 
 using namespace post;
+TEST_CASE("StorageEntry accepts stored return phases even after informational events",
+          "[storage-entry]") {
+    for (const auto phase : {TrackingEventKind::ReturnStarted,
+                             TrackingEventKind::PreparedForDispatch, TrackingEventKind::Arrived}) {
+        auto registry = test::returningAt(phase);
+        auto& shipment = registry.at("BY-1");
+        test::advance(shipment, TrackingEventKind::Information, "C");
+        REQUIRE_NOTHROW(StorageEntry(shipment, test::storagePolicy(), test::moment(20), "cell"));
+    }
+}
+TEST_CASE("Storage rejects in-transit returns without changing cell or area", "[storage-entry]") {
+    auto registry = test::returningAt(TrackingEventKind::Dispatched);
+    auto& shipment = registry.at("BY-1");
+    StorageCell cell("cell", 1000, 10, Dimensions(1000, 1000, 1000));
+    auto area = test::storageArea();
+    const auto cellBefore = cell;
+    const auto areaBefore = area;
+    for (const bool information : {false, true}) {
+        if (information) {
+            test::advance(shipment, TrackingEventKind::Information, "B");
+        }
+        REQUIRE_THROWS_AS(StorageEntry(shipment, test::storagePolicy(), test::moment(20), "cell"),
+                          InvalidShipmentStateException);
+        REQUIRE_THROWS_AS(cell.place(shipment, test::storagePolicy(), test::moment(20)),
+                          InvalidShipmentStateException);
+        REQUIRE_THROWS_AS(area.place(shipment, test::storagePolicy(), test::moment(20)),
+                          InvalidShipmentStateException);
+        REQUIRE(cell == cellBefore);
+        REQUIRE(area == areaBefore);
+    }
+}
 TEST_CASE("StorageEntry owns placement parameters and inclusive expiry boundary",
           "[storage-entry]") {
     auto registry = test::atStatus(ShipmentStatus::Accepted);

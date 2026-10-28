@@ -108,8 +108,12 @@ void DeliveryTask::validateWindow(Window window, const Courier& courier, const S
 // Первая запись окна готовится до замены идентификатора курьера.
 void DeliveryTask::schedule(Window window, const Courier& courier, const Shipment& shipment,
                             const StoragePolicy& policy) {
-    if (state_ != DeliveryTaskState::Draft) {
-        throw InvalidShipmentStateException("Task already scheduled");
+    // После физического выезда новый объект не должен продлевать исходный цикл хранения.
+    if (state_ != DeliveryTaskState::Draft ||
+        std::any_of(
+            shipment.history().events().begin(), shipment.history().events().end(),
+            [](const auto& fact) { return fact.kind() == TrackingEventKind::OutForDelivery; })) {
+        throw InvalidShipmentStateException("Use the original task after courier departure");
     }
     validateWindow(window, courier, shipment, policy);
     auto actor = courier.employee().id();
@@ -181,13 +185,14 @@ void DeliveryTask::completeDelivery(ShipmentRegistry& registry, const Courier& c
     registry = std::move(shipments);
     *this = std::move(staged);
 }
-// Повтор возможен только после физического возврата и допускающей повтор причины.
+// После отмены плана или физического возврата можно задать новое окно без обнуления журнала.
 void DeliveryTask::reschedule(Window window, const Courier& courier, const Shipment& shipment,
                               const StoragePolicy& policy) {
-    if (state_ != DeliveryTaskState::ReturnedToBranch || attempts_.empty() ||
-        !attempts_.back().canRetryAfter(window.first,
-                                        std::chrono::duration_cast<std::chrono::seconds>(
-                                            std::chrono::hours{policy.minRetryHours()}))) {
+    if ((state_ != DeliveryTaskState::ReturnedToBranch && state_ != DeliveryTaskState::Cancelled) ||
+        (!attempts_.empty() &&
+         !attempts_.back().canRetryAfter(window.first,
+                                         std::chrono::duration_cast<std::chrono::seconds>(
+                                             std::chrono::hours{policy.minRetryHours()})))) {
         throw InvalidShipmentStateException("Task failure cannot be retried");
     }
     validateWindow(window, courier, shipment, policy);

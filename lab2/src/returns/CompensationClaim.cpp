@@ -95,7 +95,8 @@ void CompensationClaim::submit(const Shipment& shipment, const Customer& claiman
 Money CompensationClaim::assess(const Shipment& shipment, Money limit,
                                 const SearchRequest* search) const {
     if ((status_ != CompensationStatus::Submitted && status_ != CompensationStatus::Approved) ||
-        shipment.trackingNumber() != shipmentId_) {
+        shipment.trackingNumber() != shipmentId_ || shipment.status() == ShipmentStatus::Draft ||
+        shipment.status() == ShipmentStatus::Cancelled || shipment.history().events().empty()) {
         throw PaymentException("Claim not assessable for shipment");
     }
     if (reason_ == CompensationReason::Lost &&
@@ -112,9 +113,11 @@ void CompensationClaim::approve(const Shipment& shipment, const PostalBranch& br
                                 const std::string& employeeId, Money amount, Money limit,
                                 std::chrono::sys_seconds time, const SearchRequest* search) {
     branch.authorize(employeeId, BranchOperation::ApproveCompensation, time);
+    // Оценка проверяет принадлежность, состояние и историю до обращения к back().
+    const auto maximum = assess(shipment, limit, search);
     if (status_ != CompensationStatus::Submitted || time < *submittedAt_ ||
         time < shipment.history().events().back().occurredAt() || amount == Money{} ||
-        amount > assess(shipment, limit, search)) {
+        amount > maximum) {
         throw PaymentException("Compensation cannot be approved");
     }
     std::string explanation = "Подтверждено в пределах оценки";

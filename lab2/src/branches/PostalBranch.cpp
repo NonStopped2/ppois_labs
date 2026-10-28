@@ -245,6 +245,26 @@ void PostalBranch::acceptShipment(ShipmentRegistry& registry, const Invoice& inv
     placeIn(areas, shipment, policy, time);
     commit(registry, std::move(staged), storageAreas_, std::move(areas));
 }
+// Проверяет направление каждого номера и меняет только подготовленные реестр и размещения.
+void PostalBranch::dispatchCargo(ShipmentRegistry& registry, std::vector<StorageArea>& areas,
+                                 const DispatchBatch& batch, const SortingPlan& plan,
+                                 std::chrono::sys_seconds time) const {
+    for (const auto& bag : batch.bags()) {
+        for (const auto& [cargoId, weight] : bag.shipmentIds()) {
+            auto& shipment = registry.at(cargoId);
+            requireStored(shipment);
+            if (shipment.weightGrams() != weight ||
+                !plan.groupForDispatch({std::cref(shipment)}).contains(batch.targetBranchId())) {
+                throw InvalidShipmentStateException("Cargo disagrees with batch direction");
+            }
+            if (detail::lastOperationalFact(shipment) != TrackingEventKind::PreparedForDispatch) {
+                detail::appendFact(shipment, TrackingEventKind::PreparedForDispatch, time, id_);
+            }
+            detail::appendFact(shipment, TrackingEventKind::Dispatched, time, id_);
+            takeFrom(areas, cargoId);
+        }
+    }
+}
 // Вся партия покидает ячейки вместе с фактами подготовки/выбытия или не меняет ничего.
 void PostalBranch::transferOut(ShipmentRegistry& registry, DispatchBatch& batch,
                                const SortingPlan& plan, const std::string& employeeId,
@@ -258,21 +278,7 @@ void PostalBranch::transferOut(ShipmentRegistry& registry, DispatchBatch& batch,
     auto staged = registry;
     auto areas = storageAreas_;
     auto prepared = batch;
-    for (const auto& bag : prepared.bags()) {
-        for (const auto& [cargoId, weight] : bag.shipmentIds()) {
-            auto& shipment = staged.at(cargoId);
-            requireStored(shipment);
-            if (shipment.weightGrams() != weight ||
-                !plan.groupForDispatch({std::cref(shipment)}).contains(batch.targetBranchId())) {
-                throw InvalidShipmentStateException("Cargo disagrees with batch direction");
-            }
-            if (detail::lastOperationalFact(shipment) != TrackingEventKind::PreparedForDispatch) {
-                detail::appendFact(shipment, TrackingEventKind::PreparedForDispatch, time, id_);
-            }
-            detail::appendFact(shipment, TrackingEventKind::Dispatched, time, id_);
-            takeFrom(areas, cargoId);
-        }
-    }
+    dispatchCargo(staged, areas, batch, plan, time);
     prepared.markDispatched();
     static_assert(std::is_nothrow_move_assignable_v<DispatchBatch>);
     commit(registry, std::move(staged), storageAreas_, std::move(areas));
@@ -380,20 +386,26 @@ void PostalBranch::sendForDelivery(ShipmentRegistry& registry, const std::string
     takeFrom(areas, trackingNumber);
     commit(registry, std::move(staged), storageAreas_, std::move(areas));
 }
-// Неудача сама не возвращает груз: сначала фиксируется физическое прибытие и новое размещение.
+// Прибытие возможно после неудачи либо явного прерывания без фиктивной попытки доставки.
 void PostalBranch::returnFromCourier(ShipmentRegistry& registry, const std::string& trackingNumber,
                                      const std::string& employeeId, const StoragePolicy& policy,
-                                     std::chrono::sys_seconds time) {
+                                     std::chrono::sys_seconds time, bool interrupted) {
     authorize(employeeId, BranchOperation::DeliverShipment, time);
     const auto& original = registry.at(trackingNumber);
     if (original.history().lastKnownBranch() != id_ ||
         original.status() != ShipmentStatus::OutForDelivery ||
-        detail::lastOperationalFact(original) != TrackingEventKind::DeliveryFailed) {
+        (detail::lastOperationalFact(original) != TrackingEventKind::DeliveryFailed &&
+         (!interrupted ||
+          detail::lastOperationalFact(original) != TrackingEventKind::OutForDelivery))) {
         throw InvalidShipmentStateException("Shipment has no failed courier attempt here");
     }
     auto staged = registry;
     auto areas = storageAreas_;
     auto& shipment = staged.at(trackingNumber);
+    if (interrupted) {
+        detail::appendFact(shipment, TrackingEventKind::Information, time, id_,
+                           "Курьерский маршрут прерван без попытки вручения");
+    }
     detail::appendFact(shipment, TrackingEventKind::Arrived, time, id_);
     detail::appendFact(shipment, TrackingEventKind::AwaitingPickup, time, id_);
     placeIn(areas, shipment, policy, time);

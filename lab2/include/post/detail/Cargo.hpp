@@ -30,6 +30,20 @@ inline std::int64_t cargoBagCount(const std::vector<DispatchBatch>& batches) {
     }
     return result;
 }
+// Проверка состава одного мешка отделена от обхода партий, без четвёртого уровня вложенности.
+inline void validateBagCargo(const MailBag& bag, std::set<std::string>& bagIds,
+                             std::set<std::string>& sealIds, std::set<std::string>& shipmentIds) {
+    if (!bag.sealedAt() || !bagIds.insert(bag.id()).second ||
+        !sealIds.insert(bag.sealId()).second) {
+        throw InvalidShipmentStateException("Invalid trip bag or seal");
+    }
+    for (const auto& [number, weight] : bag.shipmentIds()) {
+        (void)weight;
+        if (!shipmentIds.insert(number).second) {
+            throw InvalidShipmentStateException("Cargo appears twice in trip");
+        }
+    }
+}
 // Пломба и номер мешка уникальны в рейсе; один груз не входит сразу в две партии.
 inline void validateCargo(const std::vector<DispatchBatch>& batches) {
     std::set<std::string> batchIds, bagIds, sealIds, shipmentIds;
@@ -38,16 +52,7 @@ inline void validateCargo(const std::vector<DispatchBatch>& batches) {
             throw InvalidShipmentStateException("Duplicate trip batch");
         }
         for (const auto& bag : batch.bags()) {
-            if (!bag.sealedAt() || !bagIds.insert(bag.id()).second ||
-                !sealIds.insert(bag.sealId()).second) {
-                throw InvalidShipmentStateException("Invalid trip bag or seal");
-            }
-            for (const auto& [number, weight] : bag.shipmentIds()) {
-                (void)weight;
-                if (!shipmentIds.insert(number).second) {
-                    throw InvalidShipmentStateException("Cargo appears twice in trip");
-                }
-            }
+            validateBagCargo(bag, bagIds, sealIds, shipmentIds);
         }
     }
 }

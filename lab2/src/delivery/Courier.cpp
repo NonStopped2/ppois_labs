@@ -1,8 +1,11 @@
 #include "post/delivery/Courier.hpp"
+#include "post/detail/ShipmentFacts.hpp"
 #include "post/detail/Validation.hpp"
 #include "post/exceptions/DeliveryAuthorizationException.hpp"
 #include "post/exceptions/InvalidShipmentStateException.hpp"
 #include "post/exceptions/ShipmentLimitExceededException.hpp"
+#include <algorithm>
+#include <iterator>
 #include <type_traits>
 
 namespace post {
@@ -38,6 +41,34 @@ void Courier::requireRoute(const DeliveryRoute& route) const {
     if (route.courierId() != employee_.id() || activeRouteId_ != route.id()) {
         throw DeliveryAuthorizationException("Courier assigned to another route");
     }
+    std::set<std::string> keys;
+    std::transform(route.tasks().begin(), route.tasks().end(), std::inserter(keys, keys.end()),
+                   [](const auto& task) { return task.id(); });
+    if (keys != assignedTaskIds_) {
+        throw InvalidShipmentStateException("Delivery assignment disagrees with route");
+    }
+}
+// Физические операции используют действующую собственную смену в каноническом отделении.
+void Courier::requireBranch(const DeliveryRoute& route, const PostalBranch& branch,
+                            std::chrono::sys_seconds time) const {
+    requireRoute(route);
+    branch.authorize(employee_.id(), BranchOperation::DeliverShipment, time);
+    if (branch.id() != employee_.branchId()) {
+        throw DeliveryAuthorizationException("Courier belongs to another branch");
+    }
+}
+// Вычитание остатка проверяет общий лимит без риска переполнить сумму масс.
+void Courier::validateLoad(const DeliveryRoute& route, std::int64_t extraWeight) const {
+    auto remaining = maxLoadGrams_;
+    for (const auto& task : route.tasks()) {
+        if (task.weightGrams() > remaining) {
+            throw ShipmentLimitExceededException("Courier overload");
+        }
+        remaining -= task.weightGrams();
+    }
+    if (extraWeight > remaining) {
+        throw ShipmentLimitExceededException("Courier overload");
+    }
 }
 // Добавление задания и резервирование маршрута фиксируются вместе, без частичного списка ключей.
 void Courier::assignTask(const DeliveryTask& task, DeliveryRoute& route) {
@@ -45,16 +76,7 @@ void Courier::assignTask(const DeliveryTask& task, DeliveryRoute& route) {
         assignedTaskIds_.contains(task.id())) {
         throw DeliveryAuthorizationException("Task already assigned or foreign route");
     }
-    auto remaining = maxLoadGrams_;
-    for (const auto& item : route.tasks()) {
-        if (item.weightGrams() > remaining) {
-            throw ShipmentLimitExceededException("Courier overload");
-        }
-        remaining -= item.weightGrams();
-    }
-    if (task.weightGrams() > remaining) {
-        throw ShipmentLimitExceededException("Courier overload");
-    }
+    validateLoad(route, task.weightGrams());
     auto staged = *this;
     auto plan = route;
     plan.addTask(task);
@@ -63,67 +85,110 @@ void Courier::assignTask(const DeliveryTask& task, DeliveryRoute& route) {
     *this = std::move(staged);
     route = std::move(plan);
 }
+// Проверки и выдача выполняются только на подготовленных общих копиях.
+void Courier::startTasks(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
+                         std::chrono::sys_seconds time) const {
+    for (auto& task : route.tasks_) {
+        task.validateShipment(registry.at(task.shipmentId()));
+        if (task.state_ != DeliveryTaskState::Scheduled || task.courierId_ != employee_.id() ||
+            time > task.scheduledWindow_.second) {
+            throw InvalidShipmentStateException("Delivery task not ready at departure");
+        }
+        branch.sendForDelivery(registry, task.shipmentId(), employee_.id(), time);
+        task.state_ = DeliveryTaskState::InProgress;
+    }
+    route.startedAt_ = time;
+}
 // Запуск выдаёт все посылки на общих копиях склада/реестра, иначе не запускает ни одно задание.
 void Courier::startRoute(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
                          std::chrono::sys_seconds time) {
-    requireRoute(route);
-    branch.authorize(employee_.id(), BranchOperation::DeliverShipment, time);
-    if (route.startedAt_ || route.tasks_.empty() || branch.id() != employee_.branchId()) {
+    requireBranch(route, branch, time);
+    if (route.startedAt_ || route.finishedAt_ || route.tasks_.empty()) {
         throw InvalidShipmentStateException("Delivery route cannot start");
     }
-    std::set<std::string> keys;
-    auto remaining = maxLoadGrams_;
+    validateLoad(route);
     auto staged = route;
     auto station = branch;
     auto shipments = registry;
-    for (auto& task : staged.tasks_) {
-        // План — копируемое значение: перед стартом повторно проверяем нагрузку.
-        if (task.weightGrams() > remaining) {
-            throw ShipmentLimitExceededException("Courier overload at departure");
-        }
-        remaining -= task.weightGrams();
-        task.validateShipment(shipments.at(task.shipmentId()));
-        keys.insert(task.id());
-        if (task.state_ != DeliveryTaskState::Scheduled || time > task.scheduledWindow_.second) {
-            throw InvalidShipmentStateException("Delivery task not ready at departure");
-        }
-        station.sendForDelivery(shipments, task.shipmentId(), employee_.id(), time);
-        task.state_ = DeliveryTaskState::InProgress;
-    }
-    if (keys != assignedTaskIds_) {
-        throw InvalidShipmentStateException("Delivery assignment disagrees with route");
-    }
-    staged.startedAt_ = time;
+    startTasks(staged, station, shipments, time);
     static_assert(std::is_nothrow_move_assignable_v<PostalBranch> &&
                   std::is_nothrow_move_assignable_v<DeliveryRoute>);
     registry = std::move(shipments);
     branch = std::move(station);
     route = std::move(staged);
 }
-// Возвращает неудачный груз и завершает все связанные объекты только после успешного размещения.
-void Courier::finishRoute(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
-                          const StoragePolicy& policy, std::chrono::sys_seconds time) {
-    requireRoute(route);
-    branch.authorize(employee_.id(), BranchOperation::DeliverShipment, time);
-    if (!route.startedAt_ || branch.id() != employee_.branchId() ||
-        (route.finishedAt_ && time < *route.finishedAt_)) {
+// Дата информационного факта запрещает перепланировать отменённое задание задним числом.
+void Courier::cancelRoute(DeliveryRoute& route, const PostalBranch& branch,
+                          ShipmentRegistry& registry, std::chrono::sys_seconds time) {
+    requireBranch(route, branch, time);
+    if (route.startedAt_ || route.finishedAt_) {
+        throw InvalidShipmentStateException("Only an unstarted route can be cancelled");
+    }
+    auto staged = route;
+    auto shipments = registry;
+    for (auto& task : staged.tasks_) {
+        detail::appendFact(shipments.at(task.shipmentId()), TrackingEventKind::Information, time,
+                           branch.id(), "Курьерское назначение отменено до выезда");
+        task.state_ = DeliveryTaskState::Cancelled;
+    }
+    staged.finishedAt_ = time;
+    staged.currentTaskIndex_ = staged.tasks_.size();
+    registry = std::move(shipments);
+    route = std::move(staged);
+    releaseRoute();
+}
+// Прерывание возвращает также груз без состоявшейся попытки; журнал попыток не дополняется.
+void Courier::returnTasks(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
+                          const StoragePolicy& policy, std::chrono::sys_seconds time,
+                          bool interrupted) const {
+    for (auto& task : route.tasks_) {
+        const auto& shipment = registry.at(task.shipmentId());
+        task.validateShipment(shipment);
+        if (shipment.history().events().empty() ||
+            time < shipment.history().events().back().occurredAt()) {
+            throw InvalidShipmentStateException("Route finish precedes shipment history");
+        }
+        if (task.state_ == DeliveryTaskState::Failed ||
+            (interrupted && task.state_ == DeliveryTaskState::InProgress)) {
+            branch.returnFromCourier(registry, task.shipmentId(), employee_.id(), policy, time,
+                                     task.state_ == DeliveryTaskState::InProgress);
+            task.state_ = DeliveryTaskState::ReturnedToBranch;
+        }
+    }
+}
+// Общая фиксация сохраняет все четыре объекта, если хотя бы один груз не удалось разместить.
+void Courier::closeRoute(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
+                         const StoragePolicy& policy, std::chrono::sys_seconds time,
+                         bool interrupted) {
+    requireBranch(route, branch, time);
+    if (!route.startedAt_ || time < *route.startedAt_ ||
+        (route.finishedAt_ && (interrupted || time < *route.finishedAt_))) {
         throw InvalidShipmentStateException("Delivery route cannot finish here");
     }
     auto staged = route;
     auto station = branch;
     auto shipments = registry;
-    for (auto& task : staged.tasks_) {
-        if (task.state_ == DeliveryTaskState::Failed) {
-            station.returnFromCourier(shipments, task.shipmentId(), employee_.id(), policy, time);
-            task.state_ = DeliveryTaskState::ReturnedToBranch;
-        }
-    }
+    returnTasks(staged, station, shipments, policy, time, interrupted);
     if (!staged.finishedAt_) {
         staged.complete(time);
     }
     registry = std::move(shipments);
     branch = std::move(station);
     route = std::move(staged);
+    releaseRoute();
+}
+// Обычный финиш по-прежнему требует обработать все задания, не скрывая пропущенных доставок.
+void Courier::finishRoute(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
+                          const StoragePolicy& policy, std::chrono::sys_seconds time) {
+    closeRoute(route, branch, registry, policy, time, false);
+}
+// Явная административная операция доступна и после истечения окна, но не обходит смену и склад.
+void Courier::interruptRoute(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
+                             const StoragePolicy& policy, std::chrono::sys_seconds time) {
+    closeRoute(route, branch, registry, policy, time, true);
+}
+// Освобождение не выделяет память и выполняется только после успешной фиксации груза.
+void Courier::releaseRoute() noexcept {
     assignedTaskIds_.clear();
     activeRouteId_.reset();
 }

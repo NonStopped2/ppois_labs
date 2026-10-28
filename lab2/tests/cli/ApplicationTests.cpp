@@ -1,4 +1,5 @@
 #include "Application.hpp"
+#include "Display.hpp"
 #include "Scripts.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <sstream>
@@ -13,6 +14,54 @@ std::string run(const std::string& script, bool demo = true) {
     return output.str();
 }
 } // namespace
+TEST_CASE("CLI recovers an expired unstarted delivery without restarting the session",
+          "[application]") {
+    using namespace post::cli::test;
+    auto script = paid("BY-2", "i2", "550") + command(6, 1, {"d1", "A", "BY-2", "0", "60"});
+    script += advance("61") + command(6, 2, {"d1"}) + command(6, 7, {"d1"});
+    script += command(6, 5, {"d1", "d1-BY-2", "d2", "0", "60"}) + command(6, 2, {"d2"});
+    script += command(6, 3,
+                      {"d2", "d1-BY-2", "done", "1", "local", "1", "AB123", "Вера Местная",
+                       "2020-01-01", "2030-12-31", ""});
+    script += command(6, 4, {"d2"}) + command(6, 6) + command(2, 4, {"BY-2"}) + "0\n";
+    const auto output = run(script);
+    REQUIRE(output.find("Delivery task not ready at departure") != std::string::npos);
+    REQUIRE(output.find("Курьерский план отменён") != std::string::npos);
+    REQUIRE(output.find("state=Cancelled") != std::string::npos);
+    REQUIRE(output.find("отменён=1") != std::string::npos);
+    REQUIRE(output.find("Parcel | Delivered") != std::string::npos);
+    REQUIRE(output.find("попыток=1") != std::string::npos);
+}
+TEST_CASE("CLI returns expired in-progress cargo and replans without inventing an attempt",
+          "[application]") {
+    using namespace post::cli::test;
+    auto script = paid("BY-2", "i2", "550") + command(6, 1, {"d1", "A", "BY-2", "0", "60"}) +
+                  command(6, 2, {"d1"});
+    script += advance("61") + command(6, 4, {"d1"}) + command(6, 8, {"d1"}) + command(6, 6);
+    script += command(6, 5, {"d1", "d1-BY-2", "d2", "0", "60"}) + command(6, 2, {"d2"});
+    script += command(6, 3,
+                      {"d2", "d1-BY-2", "done", "1", "local", "1", "AB123", "Вера Местная",
+                       "2020-01-01", "2030-12-31", ""});
+    script += command(6, 4, {"d2"}) + command(6, 6) + command(2, 4, {"BY-2"}) + "0\n";
+    const auto output = run(script);
+    REQUIRE(output.find("Курьерский маршрут прерван") != std::string::npos);
+    REQUIRE(output.find("state=ReturnedToBranch | попыток=0") != std::string::npos);
+    REQUIRE(output.find("Parcel | Delivered") != std::string::npos);
+    REQUIRE(output.find("попыток=1") != std::string::npos);
+    REQUIRE(output.find("DeliveryFailed") == std::string::npos);
+}
+TEST_CASE("CLI configuration describes the policy actually used by the application",
+          "[application]") {
+    const auto output = run(post::cli::test::command(9, 1) + "0\n");
+    const auto policy = defaultStoragePolicy();
+    REQUIRE(output.find("хранение " + std::to_string(policy.maxStorageDays())) !=
+            std::string::npos);
+    REQUIRE(output.find("бесплатно " + std::to_string(policy.freeStorageDays())) !=
+            std::string::npos);
+    REQUIRE(output.find(moneyText(policy.dailyFee()) + "/день") != std::string::npos);
+    REQUIRE(output.find("попыток " + std::to_string(policy.maxDeliveryAttempts())) !=
+            std::string::npos);
+}
 TEST_CASE("CLI shows demo cards and distinct draft shipment kinds", "[application]") {
     const auto output = run("1\n2\n2\n3\n9\n1\n0\n");
     REQUIRE(output.find("sender | Анна Отправитель") != std::string::npos);

@@ -25,7 +25,7 @@ const std::vector<DeliveryTask>& DeliveryRoute::tasks() const noexcept {
 std::optional<std::chrono::sys_seconds> DeliveryRoute::startedAt() const noexcept {
     return startedAt_;
 }
-// Завершение не подразумевается только исчерпанием индекса.
+// Закрытие без startedAt означает отмену до выезда; задания при этом имеют Cancelled.
 std::optional<std::chrono::sys_seconds> DeliveryRoute::finishedAt() const noexcept {
     return finishedAt_;
 }
@@ -35,7 +35,7 @@ std::size_t DeliveryRoute::currentTaskIndex() const noexcept {
 }
 // Запрещает повтор задания и самого отправления, в том числе под другим ключом.
 void DeliveryRoute::addTask(const DeliveryTask& task) {
-    if (startedAt_ || task.state() != DeliveryTaskState::Scheduled ||
+    if (startedAt_ || finishedAt_ || task.state() != DeliveryTaskState::Scheduled ||
         task.courierId() != courierId_ ||
         std::any_of(tasks_.begin(), tasks_.end(), [&task](const auto& current) {
             return current.id() == task.id() || current.shipmentId() == task.shipmentId();
@@ -47,7 +47,7 @@ void DeliveryRoute::addTask(const DeliveryTask& task) {
 }
 // Перестановка строится отдельно; потеря, добавление и повтор ключа не меняют исходный порядок.
 void DeliveryRoute::reorder(const std::vector<std::string>& taskIds) {
-    if (startedAt_ || taskIds.size() != tasks_.size()) {
+    if (startedAt_ || finishedAt_ || taskIds.size() != tasks_.size()) {
         throw InvalidShipmentStateException("Delivery route cannot reorder");
     }
     std::vector<DeliveryTask> ordered;

@@ -1,6 +1,6 @@
 #include "post/sorting/SortingPlan.hpp"
+#include "post/detail/ShipmentFacts.hpp"
 #include "post/detail/Validation.hpp"
-#include "post/exceptions/InvalidShipmentStateException.hpp"
 #include <algorithm>
 #include <iterator>
 #include <set>
@@ -71,12 +71,8 @@ std::map<std::string, std::vector<std::string>> SortingPlan::groupForDispatch(
     std::set<std::string> ids;
     for (const auto reference : shipments) {
         const auto& shipment = reference.get();
-        const auto state = shipment.status();
-        const bool stored = state == ShipmentStatus::Accepted || state == ShipmentStatus::Arrived ||
-                            state == ShipmentStatus::AwaitingPickup ||
-                            state == ShipmentStatus::PreparedForDispatch ||
-                            state == ShipmentStatus::Returning;
-        if (!stored || shipment.history().lastKnownBranch() != branchId_ ||
+        if (!detail::availableForBranchStorage(shipment) ||
+            shipment.history().lastKnownBranch() != branchId_ ||
             !ids.insert(shipment.trackingNumber()).second) {
             throw InvalidShipmentStateException("Shipment unavailable for sorting at this branch");
         }

@@ -60,7 +60,9 @@ const std::array<Application::Menu, 9> Application::menus_{
       {"Записать попытку", &Application::attemptDelivery},
       {"Завершить и вернуть неудачный груз", &Application::finishDelivery},
       {"Назначить повтор", &Application::retryDelivery},
-      {"Маршруты и задания", &Application::listDelivery}},
+      {"Маршруты и задания", &Application::listDelivery},
+      {"Отменить маршрут до выезда", &Application::cancelDelivery},
+      {"Прервать маршрут и вернуть груз", &Application::interruptDelivery}},
      {{"Подать запрос возврата", &Application::submitReturn},
       {"Решение по возврату", &Application::decideReturn},
       {"Начать одобренный возврат", &Application::startReturn},
@@ -84,8 +86,7 @@ Application::Application(Console& console)
 }
 // Все начальники и курьеры принадлежат своим отделениям; у касс явные начальные остатки.
 void Application::initialize() {
-    for (const auto& [id, prefix] :
-         std::array{std::pair{"A", "22"}, std::pair{"B", "23"}, std::pair{"C", "24"}}) {
+    for (const auto& [id, prefix] : kBranches) {
         auto branch = defaultBranch(id, prefix);
         CashRegister cash("cash-" + std::string(id), id);
         cash.open(Money(kOpeningCash), branch, manager(branch).id(), now_);
@@ -488,15 +489,10 @@ void Application::revokeAuthorization() {
     lookup(authorizations_, console_.text("ID разрешения")).revoke(now_);
     console_.out() << "Разрешение отозвано.\n";
 }
-// Одна команда готовит согласованные мешок, партию, рейс и ведомость, но ещё не забирает груз.
-void Application::prepareTrip() {
-    const auto id = console_.text("ID рейса");
-    requireNew(trips_, id);
-    const auto& source = readBranch("Отделение отправления [A/B/C]");
-    const auto& target = readBranch("Следующее отделение [A/B/C]");
-    const auto& vehicle = lookup(vehicles_, console_.text("ID машины"));
-    const auto ids = readIds("Трек-номера");
-    const auto route = postalRoute("route-" + id, {source.id(), target.id()});
+// Формирует запечатанный состав; проверка и чтение не меняют склад.
+DispatchBatch Application::prepareBatch(const std::string& id, const PostalBranch& source,
+                                        const PostalBranch& target, const Vehicle& vehicle,
+                                        const std::vector<std::string>& ids) const {
     const auto plan = sortingPlan(source.id(), target.id());
     MailBag bag("bag-" + id, vehicle.maxWeightGrams(), target.id());
     for (const auto& number : ids) {
@@ -506,6 +502,18 @@ void Application::prepareTrip() {
     bag.seal("bag-seal-" + id, now_, registry_);
     DispatchBatch batch("batch-" + id, source.id(), target.id(), now_);
     batch.addBag(bag);
+    return batch;
+}
+// Одна команда готовит согласованные мешок, партию, рейс и ведомость, но ещё не забирает груз.
+void Application::prepareTrip() {
+    const auto id = console_.text("ID рейса");
+    requireNew(trips_, id);
+    const auto& source = readBranch("Отделение отправления [A/B/C]");
+    const auto& target = readBranch("Следующее отделение [A/B/C]");
+    const auto& vehicle = lookup(vehicles_, console_.text("ID машины"));
+    const auto ids = readIds("Трек-номера");
+    const auto route = postalRoute("route-" + id, {source.id(), target.id()});
+    auto batch = prepareBatch(id, source, target, vehicle, ids);
     batch.prepareForDispatch(route);
     TransportTrip trip(id, route);
     trip.loadBatch(batch, vehicle);
@@ -631,6 +639,22 @@ void Application::finishDelivery() {
     courier.finishRoute(route, branch, registry_, policy_, now_);
     console_.out() << "Курьерский маршрут завершён.\n";
 }
+// Снятие резерва не меняет физический склад; факт отмены остаётся в истории отправления.
+void Application::cancelDelivery() {
+    auto& route = lookup(deliveries_, console_.text("ID маршрута доставки"));
+    auto& courier = lookup(couriers_, route.courierId());
+    const auto& branch = lookup(branches_, courier.employee().branchId());
+    courier.cancelRoute(route, branch, registry_, now_);
+    console_.out() << "Курьерский план отменён; курьер освобождён.\n";
+}
+// Возврат без посещения адреса не расходует попытку и не скрывается под неудачным вручением.
+void Application::interruptDelivery() {
+    auto& route = lookup(deliveries_, console_.text("ID маршрута доставки"));
+    auto& courier = lookup(couriers_, route.courierId());
+    auto& branch = lookup(branches_, courier.employee().branchId());
+    courier.interruptRoute(route, branch, registry_, policy_, now_);
+    console_.out() << "Курьерский маршрут прерван; оставшийся груз возвращён, курьер освобождён.\n";
+}
 // Используется рабочая копия старого задания с журналом, а не новый объект с нулём попыток.
 void Application::retryDelivery() {
     const auto& previous = lookup(deliveries_, console_.text("ID прежнего маршрута"));
@@ -656,7 +680,8 @@ void Application::listDelivery() {
     for (const auto& [id, route] : deliveries_) {
         console_.out() << id << " | " << route.courierId()
                        << " | начат=" << route.startedAt().has_value()
-                       << " завершён=" << route.finishedAt().has_value() << '\n';
+                       << " завершён=" << route.finishedAt().has_value()
+                       << " отменён=" << (!route.startedAt() && route.finishedAt()) << '\n';
         for (const auto& task : route.tasks()) {
             console_.out() << task.id() << " | state=" << statusText(task.state())
                            << " | попыток=" << task.attempts().size() << " | до "
@@ -868,13 +893,25 @@ void Application::addBreak() {
 }
 // Начальные данные и ограничения видимы пользователю, а не спрятаны в реализации меню.
 void Application::configuration() {
-    console_.out()
-        << "Время: " << timeText(now_)
-        << "\nA: 22xxxx, B: 23xxxx, C: 24xxxx; тарифы standard/express; машина van-1.\nЛимит "
-        << kMaxWeight
-        << " г; хранение 7 дней, бесплатно 2, затем 0.50 BYN/день; попыток 3, интервал 1 "
-           "час.\nДорога 1200 с, обработка 300 с; срок предложения 24 часа; розыск минимум 3600 "
-           "с.\n";
+    console_.out() << "Время: " << timeText(now_) << "\nЛимит " << kMaxWeight << " г; хранение "
+                   << policy_.maxStorageDays() << " дней, бесплатно " << policy_.freeStorageDays()
+                   << ", затем " << moneyText(policy_.dailyFee()) << "/день; попыток "
+                   << policy_.maxDeliveryAttempts() << ", интервал " << policy_.minRetryHours()
+                   << " ч.\nДорога "
+                   << std::chrono::duration_cast<std::chrono::seconds>(kTravel).count()
+                   << " с, обработка "
+                   << std::chrono::duration_cast<std::chrono::seconds>(kHandling).count()
+                   << " с; срок предложения " << kQuoteLifetime.count() << " ч; розыск минимум "
+                   << std::chrono::duration_cast<std::chrono::seconds>(kMinimumSearchAge).count()
+                   << " с.\n";
+    for (const auto& [id, prefix] : kBranches) {
+        console_.out() << id << ": " << prefix << "xxxx; ";
+    }
+    console_.out() << "тарифы standard/express; машина van-1.\n";
+    showShifts();
+}
+// Список выводит канонические смены, включая продление и добавленные перерывы.
+void Application::showShifts() {
     for (const auto& [id, branch] : branches_) {
         console_.out() << "Отделение " << id << '\n';
         for (const auto& shift : branch.workShifts()) {

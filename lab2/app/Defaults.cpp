@@ -2,32 +2,50 @@
 #include <string_view>
 
 namespace post::cli {
+namespace {
+// То же покрытие используется в отделениях, зонах тарифа и правилах сортировки.
+std::vector<std::string> postalPrefixes() {
+    std::vector<std::string> result;
+    for (const auto& [id, prefix] : kBranches) {
+        (void)id;
+        result.emplace_back(prefix);
+    }
+    return result;
+}
+// Суммы и процент имеют имена и единицы; ноль фиксированного тарифа означает отсутствие процента.
+std::vector<ServiceRate> serviceRates() {
+    return {ServiceRate(ServiceKind::Registration, RateMode::Fixed, Money(kRegistrationFee), 0),
+            ServiceRate(ServiceKind::DeclaredValue, RateMode::Percentage, Money{},
+                        kDeclaredValueBasisPoints),
+            ServiceRate(ServiceKind::CourierDelivery, RateMode::Fixed, Money(kCourierFee), 0),
+            ServiceRate(ServiceKind::FragileHandling, RateMode::Fixed, Money(kFragileFee), 0),
+            ServiceRate(ServiceKind::DeliveryNotification, RateMode::Fixed, Money(kNotificationFee),
+                        0)};
+}
+} // namespace
 // Один явный предел используется и при регистрации, и при физическом приёме.
 Dimensions sizeLimit() {
-    return Dimensions(1000, 1000, 1000);
+    return Dimensions(kMaxSideMm, kMaxSideMm, kMaxSideMm);
 }
 // Повтор требует часа ожидания и сохраняет дедлайн исходного задания.
 StoragePolicy defaultStoragePolicy() {
-    return StoragePolicy("storage", 2, 7, Money(50), 3, 1);
+    return StoragePolicy("storage", kFreeStorageDays, kMaxStorageDays, Money(kDailyStorageFee),
+                         kMaxDeliveryAttempts, kMinRetryHours);
 }
 // Оба тарифа покрывают три учебных района, но различаются базой и шаговой ценой.
 PostageCalculator defaultCalculator() {
     std::vector<TariffPlan> plans;
     for (const auto& id : {"standard", "express"}) {
         const bool express = std::string_view(id) == "express";
-        plans.emplace_back(
-            id, id, kEpoch, kSessionEnd,
-            std::vector{TariffZone("domestic", "Учебные районы", {"22", "23", "24"}, 10000)},
-            std::vector{WeightBand(0, kMaxWeight, Money(express ? 600 : 300), 1000,
-                                   Money(express ? 100 : 75))},
-            std::vector{
-                ServiceRate(ServiceKind::Registration, RateMode::Fixed, Money(100), 0),
-                ServiceRate(ServiceKind::DeclaredValue, RateMode::Percentage, Money{}, 100),
-                ServiceRate(ServiceKind::CourierDelivery, RateMode::Fixed, Money(250), 0),
-                ServiceRate(ServiceKind::FragileHandling, RateMode::Fixed, Money(100), 0),
-                ServiceRate(ServiceKind::DeliveryNotification, RateMode::Fixed, Money(50), 0)});
+        plans.emplace_back(id, id, kEpoch, kSessionEnd,
+                           std::vector{TariffZone("domestic", "Учебные районы", postalPrefixes(),
+                                                  kDomesticBasisPoints)},
+                           std::vector{WeightBand(
+                               0, kMaxWeight, Money(express ? kExpressBase : kStandardBase),
+                               kWeightStepGrams, Money(express ? kExpressStep : kStandardStep))},
+                           serviceRates());
     }
-    return PostageCalculator(std::move(plans), 1, std::chrono::hours{24});
+    return PostageCalculator(std::move(plans), 1, kQuoteLifetime);
 }
 // Отделение владеет каноническими карточками и сменами, включая отдельного курьера.
 PostalBranch defaultBranch(const std::string& id, const std::string& prefix) {
@@ -42,8 +60,8 @@ PostalBranch defaultBranch(const std::string& id, const std::string& prefix) {
         shift.start(employee, id, kEpoch);
         shifts.push_back(std::move(shift));
     }
-    const auto cell = StorageCell(id + "-general", kVehicleWeight, 100, sizeLimit());
-    const auto fragile = StorageCell(id + "-fragile", kVehicleWeight, 100, sizeLimit());
+    const auto cell = StorageCell(id + "-general", kCellWeight, kCellCapacity, sizeLimit());
+    const auto fragile = StorageCell(id + "-fragile", kCellWeight, kCellCapacity, sizeLimit());
     return PostalBranch(id, "Отделение " + id, address,
                         {StorageArea("general-" + id, "Общая зона", StorageAreaKind::General,
                                      {cell}, {ShipmentKind::Letter, ShipmentKind::Parcel}),
@@ -54,7 +72,7 @@ PostalBranch defaultBranch(const std::string& id, const std::string& prefix) {
 // Следующий узел выбирает оператор; проверку фактического размещения выполняет отделение.
 SortingPlan sortingPlan(const std::string& source, const std::string& target) {
     return SortingPlan("sorting-" + source + "-" + target, source,
-                       {SortingRule("direction", {"22", "23", "24"}, target, 1,
+                       {SortingRule("direction", postalPrefixes(), target, 1,
                                     {ShipmentKind::Letter, ShipmentKind::Parcel})},
                        1);
 }
@@ -65,6 +83,6 @@ PostalRoute postalRoute(const std::string& id, const std::vector<std::string>& b
         stops.emplace_back(branchIds[index], static_cast<std::int64_t>(index + 1),
                            index == 0 ? std::chrono::minutes{0} : kTravel, kHandling);
     }
-    return PostalRoute(id, "Учебный маршрут", stops, std::chrono::hours{24}, {VehicleType::Van});
+    return PostalRoute(id, "Учебный маршрут", stops, kMaxRouteDuration, {VehicleType::Van});
 }
 } // namespace post::cli

@@ -3,6 +3,34 @@
 #include "post/exceptions/PaymentException.hpp"
 #include <catch2/catch_test_macros.hpp>
 using namespace post;
+TEST_CASE("CompensationClaim rejects foreign and same-number drafts before accessing history",
+          "[compensation-claim]") {
+    auto registry = test::atStatus(ShipmentStatus::Accepted);
+    const auto& shipment = registry.at("BY-1");
+    CompensationClaim claim("c");
+    claim.submit(shipment, shipment.sender(), Money(10), CompensationReason::Damaged, {"photo"},
+                 test::moment(10));
+    const auto before = claim;
+    ShipmentRegistry otherRegistry("BY");
+    const auto number = test::registerCargo(otherRegistry);
+    REQUIRE(number == shipment.trackingNumber());
+    const auto foreign = test::letter();
+    const Shipment* drafts[]{&foreign, &otherRegistry.at(number)};
+    for (const auto* invalid : drafts) {
+        REQUIRE(invalid->history().events().empty());
+        REQUIRE_THROWS_AS(claim.assess(*invalid, Money(10)), PaymentException);
+        REQUIRE_THROWS_AS(claim.approve(*invalid, test::branch(), "worker", Money(10), Money(10),
+                                        test::moment(20)),
+                          PaymentException);
+        REQUIRE(claim == before);
+    }
+    const auto other = test::registerCargo(registry);
+    test::advance(registry.at(other), TrackingEventKind::Accepted);
+    REQUIRE_THROWS_AS(claim.approve(registry.at(other), test::branch(), "worker", Money(10),
+                                    Money(10), test::moment(20)),
+                      PaymentException);
+    REQUIRE(claim == before);
+}
 TEST_CASE("CompensationClaim decisions require live authority rather than a manager card alone",
           "[compensation-claim]") {
     const auto registry = test::atStatus(ShipmentStatus::Accepted);

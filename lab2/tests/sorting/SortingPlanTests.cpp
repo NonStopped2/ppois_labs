@@ -3,6 +3,29 @@
 #include <catch2/catch_test_macros.hpp>
 
 using namespace post;
+TEST_CASE("SortingPlan distinguishes stored and dispatched return phases", "[sorting-plan]") {
+    for (const auto phase :
+         {TrackingEventKind::ReturnStarted, TrackingEventKind::PreparedForDispatch,
+          TrackingEventKind::Dispatched, TrackingEventKind::Arrived}) {
+        auto registry = test::returningAt(phase);
+        auto& shipment = registry.at("BY-1");
+        const std::string branch = phase == TrackingEventKind::Arrived ? "A" : "B";
+        const auto plan = test::sortingPlan(branch, branch == "A" ? "B" : "A");
+        for (const bool information : {false, true}) {
+            if (information) {
+                test::advance(shipment, TrackingEventKind::Information, "C");
+            }
+            const auto before = shipment.history();
+            if (phase == TrackingEventKind::Dispatched) {
+                REQUIRE_THROWS_AS(plan.groupForDispatch({std::cref(shipment)}),
+                                  InvalidShipmentStateException);
+            } else {
+                REQUIRE(plan.groupForDispatch({std::cref(shipment)}).size() == 1);
+            }
+            REQUIRE(shipment.history() == before);
+        }
+    }
+}
 TEST_CASE("SortingPlan groups by highest priority without changing shipment history",
           "[sorting-plan]") {
     auto registry = test::atStatus(ShipmentStatus::Accepted);

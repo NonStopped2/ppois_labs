@@ -47,8 +47,8 @@ std::string statusText(TripState status) {
 }
 // Неудача и фактический возврат курьерского груза — разные стадии.
 std::string statusText(DeliveryTaskState status) {
-    static constexpr std::array names{"Draft",  "Scheduled",        "InProgress",
-                                      "Failed", "ReturnedToBranch", "Delivered"};
+    static constexpr std::array names{
+        "Draft", "Scheduled", "InProgress", "Failed", "ReturnedToBranch", "Delivered", "Cancelled"};
     return names.at(static_cast<std::size_t>(status));
 }
 // Одобренное обращение ещё не означает начатый возврат.

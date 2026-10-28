@@ -16,6 +16,17 @@ inline TrackingEventKind lastOperationalFact(const Shipment& shipment) {
     }
     return last->kind();
 }
+// Последнее известное отделение не доказывает наличия: Returning сохраняется и после выбытия.
+inline bool availableForBranchStorage(const Shipment& shipment) {
+    const auto state = shipment.status();
+    if (state != ShipmentStatus::Returning) {
+        return state == ShipmentStatus::Accepted || state == ShipmentStatus::PreparedForDispatch ||
+               state == ShipmentStatus::Arrived || state == ShipmentStatus::AwaitingPickup;
+    }
+    const auto last = lastOperationalFact(shipment);
+    return last == TrackingEventKind::ReturnStarted ||
+           last == TrackingEventKind::PreparedForDispatch || last == TrackingEventKind::Arrived;
+}
 // Не вычисляет sequence + 1, пока не проверено переполнение; автомат Shipment остаётся главным.
 inline void appendFact(Shipment& shipment, TrackingEventKind kind, std::chrono::sys_seconds time,
                        const std::string& branchId, const std::string& description = "") {

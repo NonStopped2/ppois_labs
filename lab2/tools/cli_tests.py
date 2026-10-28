@@ -101,6 +101,38 @@ class CliTests(unittest.TestCase):
         self.assertIn("попыток=2", output)
         self.assertNotIn("Ошибка операции", output)
 
+    def test_expired_unstarted_courier_route_can_be_cancelled_and_replanned(self):
+        fields = quote("BY-2", "i2") + pay("i2", 550) + accept("BY-2", "i2")
+        fields += command(6, 1, "d1", "A", "BY-2", 0, 60) + advance(61)
+        fields += command(6, 2, "d1") + command(6, 7, "d1") + command(4, 2, "A")
+        fields += command(6, 5, "d1", "d1-BY-2", "d2", 0, 60) + command(6, 2, "d2")
+        fields += command(6, 3, "d2", "d1-BY-2", "done", 1, "local", *document("Вера Местная"), "")
+        fields += command(6, 4, "d2") + command(6, 6) + command(2, 4, "BY-2") + [0]
+        output = self.run_cli(fields)
+        self.assertEqual(output.count("Ошибка операции"), 1)
+        self.assertIn("Курьерский план отменён", output)
+        self.assertIn("BY-2 | A-general", output)
+        self.assertIn("state=Cancelled", output)
+        self.assertIn("Parcel | Delivered", output)
+        self.assertIn("попыток=1", output)
+
+    def test_expired_active_courier_route_returns_without_fictitious_attempt(self):
+        fields = quote("BY-2", "i2") + pay("i2", 550) + accept("BY-2", "i2")
+        fields += command(6, 1, "d1", "A", "BY-2", 0, 60) + command(6, 2, "d1") + advance(61)
+        fields += command(6, 3, "d1", "d1-BY-2", "late", 0, 1, "Не застали") + command(6, 4, "d1")
+        fields += command(6, 8, "d1") + command(6, 6) + command(4, 2, "A")
+        fields += command(6, 5, "d1", "d1-BY-2", "d2", 0, 60) + command(6, 2, "d2")
+        fields += command(6, 3, "d2", "d1-BY-2", "done", 1, "local", *document("Вера Местная"), "")
+        fields += command(6, 4, "d2") + command(6, 6) + command(2, 4, "BY-2") + [0]
+        output = self.run_cli(fields)
+        self.assertEqual(output.count("Ошибка операции"), 2)
+        self.assertIn("Курьерский маршрут прерван", output)
+        self.assertIn("state=ReturnedToBranch | попыток=0", output)
+        self.assertIn("BY-2 | A-general", output)
+        self.assertIn("Parcel | Delivered", output)
+        self.assertIn("попыток=1", output)
+        self.assertNotIn("DeliveryFailed", output)
+
     def test_return_and_original_sender_handover(self):
         def transport(trip, source, target):
             return (command(5, 1, trip, source, target, "van-1", "BY-1") + advance(300)

@@ -53,7 +53,7 @@ private:
                          const std::string& employeeId, std::chrono::sys_seconds time);
     void returnFromCourier(ShipmentRegistry& registry, const std::string& trackingNumber,
                            const std::string& employeeId, const StoragePolicy& policy,
-                           std::chrono::sys_seconds time);
+                           std::chrono::sys_seconds time, bool interrupted = false);
     void confirmLoss(ShipmentRegistry& registry, const std::string& trackingNumber,
                      const std::string& employeeId, std::chrono::sys_seconds time);
     void beginReturn(ShipmentRegistry& registry, const std::string& trackingNumber,
@@ -63,6 +63,9 @@ private:
     [[nodiscard]] const Employee& employee(const std::string& employeeId) const;
     [[nodiscard]] WorkShift& shift(const std::string& shiftId);
     void requireStored(const Shipment& shipment) const;
+    void dispatchCargo(ShipmentRegistry& registry, std::vector<StorageArea>& areas,
+                       const DispatchBatch& batch, const SortingPlan& plan,
+                       std::chrono::sys_seconds time) const;
     static void placeIn(std::vector<StorageArea>& areas, const Shipment& shipment,
                         const StoragePolicy& policy, std::chrono::sys_seconds time);
     static void takeFrom(std::vector<StorageArea>& areas, const std::string& trackingNumber);

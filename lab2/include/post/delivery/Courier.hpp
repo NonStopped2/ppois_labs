@@ -24,10 +24,26 @@ public:
                     std::chrono::sys_seconds time);
     void finishRoute(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
                      const StoragePolicy& policy, std::chrono::sys_seconds time);
+    // Отмена не изымает груз; прерывание физически возвращает оставшийся, не выдумывая попыток.
+    void cancelRoute(DeliveryRoute& route, const PostalBranch& branch, ShipmentRegistry& registry,
+                     std::chrono::sys_seconds time);
+    void interruptRoute(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
+                        const StoragePolicy& policy, std::chrono::sys_seconds time);
     bool operator==(const Courier& other) const = default;
 
 private:
     void requireRoute(const DeliveryRoute& route) const;
+    void requireBranch(const DeliveryRoute& route, const PostalBranch& branch,
+                       std::chrono::sys_seconds time) const;
+    void validateLoad(const DeliveryRoute& route, std::int64_t extraWeight = 0) const;
+    void startTasks(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
+                    std::chrono::sys_seconds time) const;
+    void returnTasks(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
+                     const StoragePolicy& policy, std::chrono::sys_seconds time,
+                     bool interrupted) const;
+    void closeRoute(DeliveryRoute& route, PostalBranch& branch, ShipmentRegistry& registry,
+                    const StoragePolicy& policy, std::chrono::sys_seconds time, bool interrupted);
+    void releaseRoute() noexcept;
     Employee employee_;
     std::string vehicleId_;
     std::int64_t maxLoadGrams_;
