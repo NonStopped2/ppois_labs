@@ -1,5 +1,6 @@
 #include "post/sorting/MailBag.hpp"
 #include "post/branches/PostalBranch.hpp"
+#include "post/detail/ShipmentFacts.hpp"
 #include "post/detail/Validation.hpp"
 #include "post/exceptions/InvalidShipmentStateException.hpp"
 #include "post/exceptions/ShipmentLimitExceededException.hpp"
@@ -72,7 +73,8 @@ void MailBag::remove(const std::string& trackingNumber) {
     totalWeightGrams_ -= found->second;
     shipmentIds_.erase(found);
 }
-// Сверяет снимок с реестром и хронологией, затем фиксирует непустой состав одной пломбой.
+// Сверяет снимок с реестром и хронологией; Returning сам по себе не доказывает наличия груза.
+// Все элементы проверяются до установки пломбы, чтобы отказ не изменял мешок частично.
 void MailBag::seal(const std::string& requestedSealId, std::chrono::sys_seconds time,
                    const ShipmentRegistry& registry) {
     detail::requireTime(time);
@@ -82,12 +84,7 @@ void MailBag::seal(const std::string& requestedSealId, std::chrono::sys_seconds 
     }
     for (const auto& [cargoId, weight] : shipmentIds_) {
         const auto& shipment = registry.at(cargoId);
-        const auto state = shipment.status();
-        const bool stored =
-            state == ShipmentStatus::Accepted || state == ShipmentStatus::PreparedForDispatch ||
-            state == ShipmentStatus::Arrived || state == ShipmentStatus::AwaitingPickup ||
-            state == ShipmentStatus::Returning;
-        if (!stored || shipment.weightGrams() != weight ||
+        if (!detail::availableForBranchStorage(shipment) || shipment.weightGrams() != weight ||
             shipment.history().events().back().occurredAt() > time) {
             throw InvalidShipmentStateException("Cargo changed or seal predates its history");
         }

@@ -79,3 +79,97 @@ TEST_CASE("MailBag supports extreme aggregate mass without intermediate overflow
     bag.remove(large);
     REQUIRE(bag.totalWeightGrams() == 1);
 }
+TEST_CASE("MailBag rechecks return cargo after another batch departs", "[mail-bag]") {
+    ShipmentRegistry registry("BY");
+    auto source = test::branch();
+    auto target = test::branch("B", "23");
+    const auto letterId = test::registerCargo(registry);
+    Parcel parcel(test::customer("sender", "220000"), test::customer("recipient", "230000"), 500,
+                  DeliveryOptions{}, Dimensions(200, 100, 50), PackagingKind::Box);
+    parcel.addItem(ContentItem("Книга", 1, 100, Money(200), ContentCategory::GeneralGoods));
+    parcel.seal("parcel-seal");
+    const auto parcelId =
+        registry.registerShipment(parcel, 1000, Dimensions(1000, 1000, 1000), 100);
+    for (const auto& id : {letterId, parcelId}) {
+        test::accept(source, registry, id);
+    }
+    auto outbound = test::preparedBatch(registry, target, {letterId, parcelId});
+    source.transferOut(registry, outbound, test::sortingPlan(), "worker", test::moment(30));
+    target.receiveBatch(registry, outbound, "worker", test::storagePolicy(), test::moment(2200));
+    for (const auto& id : {letterId, parcelId}) {
+        ReturnRequest request("return-" + id);
+        request.submit(registry.at(id), registry.at(id).recipient(), ReturnReason::RecipientRefused,
+                       test::moment(2250));
+        request.approve(registry.at(id), test::employee("worker", "B"), target,
+                        test::storagePolicy(), test::moment(2260));
+        request.beginReturn(target, registry, test::employee("worker", "B"), test::moment(2270));
+    }
+    MailBag pending("pending", 10000, "A");
+    for (const auto& id : {letterId, parcelId}) {
+        pending.add(registry.at(id), source, test::sortingPlan("B", "A"));
+    }
+    auto returning = test::preparedBatch(registry, source, {parcelId}, "B", 2300);
+    target.transferOut(registry, returning, test::sortingPlan("B", "A"), "worker",
+                       test::moment(2310));
+    SECTION("Immediately after physical dispatch") {}
+    SECTION("After a later informational event") {
+        auto& shipment = registry.at(parcelId);
+        shipment.applyTrackingEvent(TrackingEvent(
+            shipment.history().events().back().sequence() + 1, TrackingEventKind::Information,
+            test::moment(2320), "B", "Посылка находится в пути"));
+    }
+    REQUIRE(registry.at(parcelId).status() == ShipmentStatus::Returning);
+    REQUIRE_THROWS_AS(target.storageEntry(parcelId), ShipmentNotFoundException);
+    REQUIRE(target.storageEntry(letterId).shipmentId() == letterId);
+    const auto before = pending;
+    // Первый элемент ещё на складе; отказ на втором не должен частично пломбировать мешок.
+    REQUIRE_THROWS_AS(pending.seal("stale-seal", test::moment(2330), registry),
+                      InvalidShipmentStateException);
+    REQUIRE(pending == before);
+    REQUIRE_FALSE(pending.sealedAt());
+    REQUIRE(pending.sealId().empty());
+    pending.remove(parcelId);
+    pending.seal("remaining-cargo", test::moment(2330), registry);
+    REQUIRE(pending.sealedAt() == test::moment(2330));
+    REQUIRE(pending.shipmentIds().size() == 1);
+}
+TEST_CASE("MailBag seals stored return phases without losing chronology checks", "[mail-bag]") {
+    for (const auto phase : {TrackingEventKind::ReturnStarted,
+                             TrackingEventKind::PreparedForDispatch, TrackingEventKind::Arrived}) {
+        for (const bool information : {false, true}) {
+            INFO("Return phase: " << static_cast<int>(phase) << "; information: " << information);
+            auto registry = test::returningAt(
+                phase == TrackingEventKind::Arrived ? TrackingEventKind::Dispatched : phase);
+            if (phase == TrackingEventKind::Arrived) {
+                test::advance(registry.at("BY-1"), TrackingEventKind::Arrived, "C");
+            }
+            const auto source = phase == TrackingEventKind::Arrived ? "C" : "B";
+            MailBag bag("bag", 10000, "A");
+            bag.add(registry.at("BY-1"), test::branch(), test::sortingPlan(source, "A"));
+            const auto lastTime = registry.at("BY-1").history().events().back().occurredAt();
+            if (information) {
+                test::advance(registry.at("BY-1"), TrackingEventKind::Information, source);
+            }
+            // Информация не меняет фазу, но её время тоже ограничивает дату пломбы.
+            const auto tooEarly = information ? lastTime : lastTime - std::chrono::seconds{1};
+            const auto before = bag;
+            REQUIRE_THROWS_AS(bag.seal("early", tooEarly, registry), InvalidShipmentStateException);
+            REQUIRE(bag == before);
+            bag.seal("seal", test::moment(20), registry);
+            REQUIRE(bag.sealedAt() == test::moment(20));
+            REQUIRE(bag.sealId() == "seal");
+        }
+    }
+}
+TEST_CASE("MailBag rejects changed cargo mass without modifying its snapshot", "[mail-bag]") {
+    const auto registry = test::atStatus(ShipmentStatus::Accepted);
+    MailBag bag("bag", 10000, "B");
+    bag.add(registry.at("BY-1"), test::branch("B", "23"), test::sortingPlan());
+    ShipmentRegistry replacement("BY");
+    const auto id = test::registerCargo(replacement, 21);
+    test::advance(replacement.at(id), TrackingEventKind::Accepted);
+    const auto before = bag;
+    REQUIRE_THROWS_AS(bag.seal("seal", test::moment(20), replacement),
+                      InvalidShipmentStateException);
+    REQUIRE(bag == before);
+}
