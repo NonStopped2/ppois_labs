@@ -73,12 +73,32 @@ class ReleaseWorkflowTests(unittest.TestCase):
         for workflow in self.workflows:
             with self.subTest(workflow=workflow.name):
                 release = workflow.read_text().split("\n  release:\n", 1)[1]
-                self.assertIn("    needs: [build, quality]\n", release)
+                self.assertIn("    needs: [changes, build, quality]\n", release)
                 condition = re.search(r"    if: >-\n(.*?)    runs-on:", release, re.S)
                 self.assertIsNotNone(condition)
                 expected = ("github.event_name == 'push' && "
-                            f"(github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/{workflow.stem}-v'))")
+                            f"((github.ref == 'refs/heads/main' && needs.changes.outputs.{workflow.stem} == 'true') || "
+                            f"startsWith(github.ref, 'refs/tags/{workflow.stem}-v'))")
                 self.assertEqual(" ".join(condition.group(1).split()), expected)
+
+    def test_scope_job_gets_full_history_and_push_endpoints_without_skipping_checks(self):
+        for workflow in self.workflows:
+            with self.subTest(workflow=workflow.name):
+                text = workflow.read_text()
+                scope = text.split("\n  changes:\n", 1)[1].split("\n  build:\n", 1)[0]
+                self.assertIn("fetch-depth: 0", scope)
+                self.assertIn("BEFORE_SHA: ${{ github.event.before }}", scope)
+                self.assertIn("RELEASE_SHA: ${{ github.sha }}", scope)
+                self.assertIn("EVENT_NAME: ${{ github.event_name }}", scope)
+                self.assertIn("RELEASE_REF: ${{ github.ref }}", scope)
+                self.assertIn("run: python3 tools/release_changes.py", scope)
+                for lab in ("lab1", "lab2"):
+                    self.assertIn(f"{lab}: ${{{{ steps.scope.outputs.{lab} }}}}", scope)
+                self.assertNotRegex(scope, r"(?m)^    if:")
+                self.assertNotRegex(text, r"(?m)^    paths(?:-ignore)?:")
+                for job, following in (("build", "quality"), ("quality", "release")):
+                    section = text.split(f"\n  {job}:\n", 1)[1].split(f"\n  {following}:\n", 1)[0]
+                    self.assertNotRegex(section, r"(?m)^    (?:if|needs):")
 
     def test_release_shell_steps_are_valid_bash(self):
         for workflow in self.workflows:
