@@ -1,0 +1,189 @@
+name: Lab 2 verification and releases
+
+on:
+  push:
+    branches: [main, feature/lab2]
+    tags: ['lab2-v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect release scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      lab1: ${{ steps.scope.outputs.lab1 }}
+      lab2: ${{ steps.scope.outputs.lab2 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Detect affected labs in the complete push
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_REF: ${{ github.ref }}
+          BEFORE_SHA: ${{ github.event.before }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: python3 tools/release_changes.py
+
+  build:
+    name: Test and package (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    env:
+      CXX: clang++
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
+      ASAN_OPTIONS: halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Configure sanitizer tests
+        run: >-
+          cmake -S . -B build/test -DCMAKE_BUILD_TYPE=Debug
+          -DLAB2_ENABLE_SANITIZERS=ON -DBUILD_SHARED_LIBS=OFF
+      - name: Build tests and application
+        run: cmake --build build/test --target post_core_tests post_ui_tests post_cli --parallel 4
+      - name: Run domain, UI, CLI and tooling tests
+        run: ctest --test-dir build/test -L '^lab2($|-)' --output-on-failure
+      - name: Configure standalone Release without tests
+        run: >-
+          cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF
+      - name: Build standalone application
+        run: cmake --build build/release --target post_cli --parallel 4
+      - name: Install, relocate, package and test extracted archive
+        run: python3 lab2/tools/package.py --build-dir build/release --output-dir build/packages
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: lab2-release-${{ matrix.os }}
+          path: build/packages/*.tar.gz*
+          if-no-files-found: error
+
+  quality:
+    name: Coverage, analysis and documentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install verification tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 llvm-18 cppcheck doxygen
+          python3 -m pip install clang-format==18.1.8
+      - name: Test release workflow rules without publishing
+        run: |
+          python3 tools/test_release_changes.py
+          python3 tools/test_release_workflow.py
+      - name: Check formatting, Python, cppcheck and standalone headers
+        env:
+          CXX: clang++-18
+        run: python3 lab2/tools/quality.py
+      - name: Configure LLVM coverage
+        run: >-
+          cmake -S . -B build/coverage -DCMAKE_BUILD_TYPE=Debug
+          -DLAB2_ENABLE_COVERAGE=ON -DCMAKE_CXX_COMPILER=clang++-18
+          -DBUILD_SHARED_LIBS=OFF
+      - name: Build instrumented tests and application
+        run: cmake --build build/coverage --target post_core_tests post_ui_tests post_cli --parallel 4
+      - name: Enforce domain-only unit coverage above 90 percent
+        run: >-
+          python3 lab2/tools/coverage.py --build-dir build/coverage
+          --llvm-cov llvm-cov-18 --llvm-profdata llvm-profdata-18
+      - name: Enforce full production unit coverage above 90 percent
+        run: >-
+          python3 lab2/tools/coverage.py --build-dir build/coverage --with-ui
+          --llvm-cov llvm-cov-18 --llvm-profdata llvm-profdata-18
+      - name: Generate documentation
+        run: cmake --build build/coverage --target lab2_docs
+      - name: Package documentation
+        run: python3 lab2/tools/package.py --build-dir build/coverage --output-dir build/packages --docs-only
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: lab2-coverage-report
+          path: build/coverage/lab2-unit-coverage-*/coverage.json
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: lab2-release-docs
+          path: build/packages/*.tar.gz*
+          if-no-files-found: error
+
+  release:
+    name: Publish verified release
+    needs: [changes, build, quality]
+    if: >-
+      github.event_name == 'push' &&
+      ((github.ref == 'refs/heads/main' && needs.changes.outputs.lab2 == 'true') ||
+       startsWith(github.ref, 'refs/tags/lab2-v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Select release tag
+        id: release_tag
+        env:
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_REF_NAME: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          if [[ "$RELEASE_REF" == 'refs/heads/main' ]]; then
+            [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+            tag="lab2-main-$RELEASE_SHA"
+          else
+            [[ "$RELEASE_REF" == "refs/tags/$RELEASE_REF_NAME" ]] || exit 1
+            [[ "$RELEASE_REF_NAME" =~ ^lab2-v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+            tag="$RELEASE_REF_NAME"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: lab2-release-*
+          merge-multiple: true
+          path: dist
+      - name: Verify release assets
+        run: |
+          cd dist
+          test -f ppois-lab2-linux-x86_64.tar.gz
+          test -f ppois-lab2-macos-arm64.tar.gz
+          test -f ppois-lab2-docs.tar.gz
+          for archive in *.tar.gz; do sha256sum --check "$archive.sha256"; done
+      - name: Publish release without moving existing tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_SHA: ${{ github.sha }}
+          RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
+        run: |
+          options=(--verify-tag --prerelease)
+          if [[ "$RELEASE_REF" == 'refs/heads/main' ]]; then
+            options=(--target "$RELEASE_SHA")
+          fi
+          gh release create "$RELEASE_TAG" dist/*.tar.gz dist/*.sha256 \
+            "${options[@]}" --latest=false --title "$RELEASE_TAG" --generate-notes
