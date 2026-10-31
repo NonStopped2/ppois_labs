@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <limits>
 
+// StoragePolicy — правила хранения и доставки: бесплатные дни, дедлайн, плата и лимиты попыток.
+// По времени размещения вычисляет срок и плату; начавшиеся платные сутки округляет вверх.
+// StorageEntry и DeliveryTask используют эту политику, но сами данные склада она не меняет.
 namespace post {
 namespace {
 constexpr auto kSecondsPerDay =

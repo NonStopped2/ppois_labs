@@ -6,6 +6,9 @@
 #include "post/exceptions/TransportUnavailableException.hpp"
 #include <set>
 
+// DispatchBatch — партия мешков между двумя отделениями для перевозки в TransportTrip.
+// Хранит собственные мешки; после подготовки состав не меняется и соответствует маршруту.
+// Проходит Draft → Ready → InTransit → Received; физическое выбытие проводит PostalBranch.
 namespace post {
 // У партии разные источник и назначение; время создания задаётся явно.
 DispatchBatch::DispatchBatch(const std::string& id, const std::string& sourceBranchId,

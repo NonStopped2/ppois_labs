@@ -4,6 +4,9 @@
 #include "post/exceptions/InvalidShipmentStateException.hpp"
 #include <algorithm>
 
+// WorkShift — смена сотрудника: плановые и фактические начало/конец, состояние и перерывы.
+// Проверяет хронологию и считает отработанное время без перерывов.
+// PostalBranch допускает операции только в действующей рабочей смене, а не по одной роли.
 namespace post {
 // Плановый интервал полуоткрытый [start, end), пустая смена недопустима.
 WorkShift::WorkShift(const std::string& id, const std::string& employeeId,

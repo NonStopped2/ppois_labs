@@ -5,6 +5,9 @@
 #include <iterator>
 #include <utility>
 
+// TariffZone — область доставки по префиксам почтовых индексов и её коэффициент цены.
+// Определяет покрытие адреса и пересечение с другой зоной для проверки TariffPlan.
+// Коэффициент задан целыми базисными пунктами: 10000 соответствует множителю 1.
 namespace post {
 namespace {
 constexpr std::size_t kPostalCodeLength = 6;

@@ -15,7 +15,9 @@
 namespace post {
 class Courier;
 class PostalBranch;
-// Сохраняет исходный срок цикла доставки; возврат курьера не обнуляет попытки и не продлевает его.
+// DeliveryTask — доставка одного отправления: получатель, адрес, окно, курьер и журнал попыток.
+// Проверяет время, StoragePolicy и личность при вручении; принадлежит DeliveryRoute.
+// Повтор сохраняет ID задания, реальные попытки и исходный дедлайн, а не начинает цикл заново.
 class DeliveryTask {
 public:
     using Window = std::pair<std::chrono::sys_seconds, std::chrono::sys_seconds>;

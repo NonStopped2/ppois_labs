@@ -2,6 +2,9 @@
 #include "post/detail/Validation.hpp"
 #include "post/exceptions/InvalidShipmentDataException.hpp"
 
+// DeliveryAttempt — факт одной попытки: ID, время, результат, причина неудачи и пояснение.
+// Проверяет согласованность результата с причиной и возможность повтора после интервала.
+// Хранится в DeliveryTask; общий лимит попыток и срок дополнительно проверяет StoragePolicy.
 namespace post {
 // Неудача требует известную причину и содержательное пояснение; успех не маскирует отказ.
 DeliveryAttempt::DeliveryAttempt(const std::string& id, std::chrono::sys_seconds attemptedAt,

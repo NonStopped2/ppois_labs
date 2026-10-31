@@ -7,7 +7,9 @@
 
 namespace post {
 
-// Явные сроки хранения и повторных попыток; начавшиеся платные сутки округляются вверх.
+// StoragePolicy — правила хранения и доставки: бесплатные дни, дедлайн, плата и лимиты попыток.
+// По времени размещения вычисляет срок и плату; начавшиеся платные сутки округляет вверх.
+// StorageEntry и DeliveryTask используют эту политику, но сами данные склада она не меняет.
 class StoragePolicy {
 public:
     StoragePolicy(const std::string& id, std::int64_t freeStorageDays, std::int64_t maxStorageDays,

@@ -4,7 +4,9 @@
 
 namespace post {
 
-// Чистый расчёт по снимкам планов: основная цена с зоной и выбранные услуги без дублей.
+// PostageCalculator — расчёт стоимости зарегистрированного черновика по TariffPlan.
+// Собирает основную пересылку с зональным коэффициентом и доплаты в строки PostageQuote.
+// Учитывает округление и срок предложения, сравнивает планы; не меняет отправление и кассу.
 class PostageCalculator {
 public:
     PostageCalculator(std::vector<TariffPlan> tariffPlans, std::int64_t roundingStepKopecks,

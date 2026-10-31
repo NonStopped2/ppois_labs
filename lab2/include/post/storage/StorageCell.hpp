@@ -3,7 +3,9 @@
 #include <vector>
 
 namespace post {
-// Ячейка владеет только записями размещения; ограничивает общую массу и число отправлений.
+// StorageCell — складская ячейка с пределами массы, числа мест и размеров одного отправления.
+// Владеет записями StorageEntry, не самими Shipment; place() проверяет лимиты до добавления.
+// take() удаляет размещение и возвращает его снимок; используется внутри StorageArea.
 class StorageCell {
 public:
     StorageCell(const std::string& id, std::int64_t maxWeightGrams, std::int64_t maxItems,

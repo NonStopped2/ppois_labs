@@ -6,6 +6,9 @@
 #include "post/exceptions/ShipmentLimitExceededException.hpp"
 #include "post/exceptions/ShipmentNotFoundException.hpp"
 
+// MailBag — мешок одного направления: хранит трек-номера, снимки массы и данные пломбы.
+// Проверяет направление по SortingPlan и вместимость; не владеет самими отправлениями.
+// Перед пломбированием сверяет груз с реестром, после — запрещает менять состав.
 namespace post {
 // Назначение и положительная вместимость определяются до добавления отправлений.
 MailBag::MailBag(const std::string& id, std::int64_t maxWeightGrams,

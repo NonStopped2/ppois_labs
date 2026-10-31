@@ -2,6 +2,9 @@
 #include "post/detail/Validation.hpp"
 #include "post/exceptions/PaymentException.hpp"
 
+// Refund — возврат денег по конкретному Payment: хранит ссылки на платёж и счёт, сумму и причину.
+// Проверяет время и невозвращённый остаток исходной оплаты; проводится через Invoice/CashRegister.
+// Это возврат оплаты пересылки, а не компенсация за утрату или повреждение отправления.
 namespace post {
 // Непустое основание и положительная сумма обязательны до поиска исходной оплаты.
 Refund::Refund(const std::string& id, const std::string& paymentId, const std::string& invoiceId,

@@ -7,7 +7,9 @@
 #include <vector>
 
 namespace post {
-// Плановая смена и её фактическое выполнение; перерывы записываются в хронологическом порядке.
+// WorkShift — смена сотрудника: плановые и фактические начало/конец, состояние и перерывы.
+// Проверяет хронологию и считает отработанное время без перерывов.
+// PostalBranch допускает операции только в действующей рабочей смене, а не по одной роли.
 class WorkShift {
 public:
     WorkShift(const std::string& id, const std::string& employeeId, const std::string& branchId,

@@ -2,6 +2,9 @@
 #include "post/detail/Validation.hpp"
 #include "post/exceptions/DeliveryAuthorizationException.hpp"
 
+// Employee — карточка сотрудника: ID, имя, роль, отделение и признак активности.
+// authorize() проверяет право на вид операции с учётом роли и места работы.
+// Рабочее время проверяется отдельно через WorkShift внутри PostalBranch.
 namespace post {
 namespace {
 // StartShift доступна любой известной роли; остальные действия разделяют обязанности.

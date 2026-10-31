@@ -4,6 +4,9 @@
 #include "post/transport/TransportTrip.hpp"
 #include <algorithm>
 
+// Vehicle — транспорт: регистрационный номер, тип, грузоподъёмность и предел числа мешков.
+// Проверяет вместимость, маршрут и VehicleInspection перед назначением на TransportTrip.
+// Хранит ID назначения, а не копию рейса; освобождение проверяет завершение этого рейса.
 namespace post {
 // Положительные лимиты и известный вид транспорта проверяются до резервирования.
 Vehicle::Vehicle(const std::string& id, const std::string& registrationNumber,

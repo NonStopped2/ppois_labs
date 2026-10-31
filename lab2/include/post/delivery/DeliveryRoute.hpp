@@ -7,7 +7,9 @@
 #include <vector>
 
 namespace post {
-// Единственный изменяемый владелец заданий маршрута; перестановка сохраняет их состав.
+// DeliveryRoute — маршрут одного курьера: владеет заданиями, их порядком и датами выполнения.
+// Выбирает следующее задание и проводит попытки через DeliveryTask с изменением реестра.
+// Перестановка не меняет состав заданий; начало и возврат груза согласует Courier.
 class DeliveryRoute {
 public:
     DeliveryRoute(const std::string& id, const std::string& courierId);

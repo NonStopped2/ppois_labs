@@ -3,7 +3,9 @@
 
 namespace post {
 
-// Интервал (lower, upper]; базовая цена включает первый весовой шаг.
+// WeightBand — цена пересылки для диапазона массы (нижняя граница, верхняя граница].
+// Базовая цена включает первый шаг; каждый дополнительный начатый шаг оплачивается отдельно.
+// TariffPlan выбирает подходящий диапазон, а priceFor() проверяет массу и считает сумму.
 class WeightBand {
 public:
     WeightBand(std::int64_t lowerExclusiveGrams, std::int64_t upperInclusiveGrams, Money basePrice,

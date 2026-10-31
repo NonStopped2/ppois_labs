@@ -3,6 +3,9 @@
 #include "post/exceptions/TransportUnavailableException.hpp"
 #include <algorithm>
 
+// VehicleInspection — допуск конкретной машины: срок, инспектор и устранение замечаний.
+// Одобрение требует подходящих полномочий и устранённых дефектов; новый дефект снимает одобрение.
+// Vehicle и TransportTrip проверяют допуск перед выездом; границы срока включены.
 namespace post {
 // У документа явный включённый срок и конкретная машина, но ещё нет одобрения.
 VehicleInspection::VehicleInspection(const std::string& id, const Vehicle& vehicle,

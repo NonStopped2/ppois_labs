@@ -6,7 +6,9 @@
 
 namespace post {
 class PostalBranch;
-// Запрос, решение и начало возврата — разные факты; адреса клиентов в Shipment не переставляются.
+// ReturnRequest — запрос возврата отправителю: инициатор, причина, решение и даты.
+// Разделяет подачу, одобрение/отказ и начало возврата через PostalBranch.
+// Одобрение само не перевозит груз; исходные отправитель и получатель в Shipment не меняются.
 class ReturnRequest {
 public:
     explicit ReturnRequest(const std::string& id);

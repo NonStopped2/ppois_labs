@@ -3,7 +3,9 @@
 #include "post/shipments/Shipment.hpp"
 
 namespace post {
-// Разрешение связано с конкретным отправлением, доверителем и представителем, а не только с именем.
+// PickupAuthorization — разрешение получить конкретное отправление за другого клиента.
+// Хранит ID отправления, доверителя и представителя, срок действия и дату отзыва.
+// При выдаче в отделении или курьером сверяет участников, документ, время и отсутствие отзыва.
 class PickupAuthorization {
 public:
     PickupAuthorization(const std::string& id, const Shipment& shipment, const Customer& principal,

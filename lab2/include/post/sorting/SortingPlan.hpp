@@ -4,7 +4,9 @@
 #include <map>
 
 namespace post {
-// Неизменяемая версия правил одного отделения; группировка возвращает номера, не копии отправлений.
+// SortingPlan — версия набора правил сортировки одного отделения.
+// Проверяет доступность груза в отделении и группирует трек-номера по следующим отделениям.
+// Возврат направляет к отправителю; результат — номера, а не новые владельцы Shipment.
 class SortingPlan {
 public:
     SortingPlan(const std::string& id, const std::string& branchId, std::vector<SortingRule> rules,

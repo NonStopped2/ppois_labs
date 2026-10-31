@@ -4,7 +4,9 @@
 #include <string>
 
 namespace post {
-// Неизменяемый результат одной попытки; повторяемость причины не заменяет лимиты StoragePolicy.
+// DeliveryAttempt — факт одной попытки: ID, время, результат, причина неудачи и пояснение.
+// Проверяет согласованность результата с причиной и возможность повтора после интервала.
+// Хранится в DeliveryTask; общий лимит попыток и срок дополнительно проверяет StoragePolicy.
 class DeliveryAttempt {
 public:
     DeliveryAttempt(const std::string& id, std::chrono::sys_seconds attemptedAt,

@@ -6,7 +6,9 @@
 
 namespace post {
 
-// Снимок расчёта для конкретного трек-номера и версии; строки объясняют полную цену.
+// PostageQuote — готовый снимок расчёта: строки начислений, тариф и срок действия.
+// Привязан к трек-номеру и версии Shipment; изменение массы или услуг делает снимок устаревшим.
+// Invoice хранит этот расчёт, а validateFor() проверяет его актуальность перед оплатой.
 class PostageQuote {
 public:
     PostageQuote(const std::string& id, const std::string& shipmentTrackingNumber,

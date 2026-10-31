@@ -4,7 +4,9 @@
 #include <string>
 
 namespace post {
-// Проверенная карточка сотрудника; полномочия зависят от роли, активности и места работы.
+// Employee — карточка сотрудника: ID, имя, роль, отделение и признак активности.
+// authorize() проверяет право на вид операции с учётом роли и места работы.
+// Рабочее время проверяется отдельно через WorkShift внутри PostalBranch.
 class Employee {
 public:
     Employee(const std::string& id, const std::string& fullName, EmployeeRole role,

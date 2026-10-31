@@ -3,7 +3,9 @@
 #include <map>
 
 namespace post {
-// Ведомость — независимый снимок состава, а не изменяемое владение грузом рейса.
+// TransportManifest — транспортная ведомость: снимок ID партий, пломб и общей массы рейса.
+// buildFor() создаёт её по подготовленному TransportTrip; verifyAgainst() сверяет состав.
+// Не владеет отправлениями и не меняется вместе с рейсом: нужна для контроля перед выездом.
 class TransportManifest {
 public:
     [[nodiscard]] static TransportManifest

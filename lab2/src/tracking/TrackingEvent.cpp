@@ -7,6 +7,9 @@
 #include <array>
 #include <utility>
 
+// TrackingEvent — один факт обработки: порядковый номер, вид, время, отделение и описание.
+// Проверяет допустимость собственных полей; сам не меняет состояние Shipment.
+// Порядок событий контролирует TrackingHistory, а допустимость перехода — Shipment.
 namespace post {
 namespace {
 

@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <iterator>
 
+// TransportManifest — транспортная ведомость: снимок ID партий, пломб и общей массы рейса.
+// buildFor() создаёт её по подготовленному TransportTrip; verifyAgainst() сверяет состав.
+// Не владеет отправлениями и не меняется вместе с рейсом: нужна для контроля перед выездом.
 namespace post {
 namespace {
 // Порядок партий входит в снимок загрузки.

@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <numeric>
 
+// Invoice — счёт на пересылку: хранит PostageQuote и журналы Payment/Refund, считает долг.
+// Проверяет актуальность расчёта и суммы; возврат денег снова увеличивает задолженность.
+// CashRegister согласует изменения счёта и кассы; Refunded не означает отмену счёта.
 namespace post {
 // Срок счёта целиком находится внутри срока снимка расчёта; бесплатный счёт сразу оплачен.
 Invoice::Invoice(const std::string& id, const PostageQuote& quote,

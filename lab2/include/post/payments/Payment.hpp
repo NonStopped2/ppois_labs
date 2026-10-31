@@ -8,7 +8,9 @@
 namespace post {
 class Invoice;
 
-// Неизменяемый положительный платёж; наличный/карточный способ не обращается к банку.
+// Payment — запись одной положительной оплаты: ID, счёт, сумма, способ и время.
+// Проверяет связь со счётом, срок, хронологию и отсутствие повторного ID платежа.
+// Создание записи не проводит оплату: её регистрируют Invoice и CashRegister; банка здесь нет.
 class Payment {
 public:
     Payment(const std::string& id, const std::string& invoiceId, Money amount, PaymentMethod method,

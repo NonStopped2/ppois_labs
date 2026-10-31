@@ -6,8 +6,9 @@
 
 namespace post {
 
-// Счёт владеет снимком предложения и журналами денег; возврат вновь открывает задолженность.
-// Refunded означает нулевую зачтённую оплату, а не отмену счёта; отмена — отдельная операция.
+// Invoice — счёт на пересылку: хранит PostageQuote и журналы Payment/Refund, считает долг.
+// Проверяет актуальность расчёта и суммы; возврат денег снова увеличивает задолженность.
+// CashRegister согласует изменения счёта и кассы; Refunded не означает отмену счёта.
 class Invoice {
 public:
     Invoice(const std::string& id, const PostageQuote& quote, std::chrono::sys_seconds issuedAt,

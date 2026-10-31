@@ -3,7 +3,9 @@
 #include <vector>
 
 namespace post {
-// Выбирает следующее отделение по индексу и продукту; больший приоритет важнее.
+// SortingRule — одно правило направления: префиксы индексов, виды груза и следующее отделение.
+// matches() проверяет отправление; conflictsWith() выявляет неоднозначные правила.
+// SortingPlan выбирает подходящее правило с наибольшим приоритетом.
 class SortingRule {
 public:
     SortingRule(const std::string& id, std::vector<std::string> destinationPrefixes,

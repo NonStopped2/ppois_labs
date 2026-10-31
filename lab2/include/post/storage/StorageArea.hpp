@@ -5,7 +5,9 @@
 #include <map>
 
 namespace post {
-// Зона объединяет ячейки и правила совместимости; план first-fit не изменяет настоящую загрузку.
+// StorageArea — зона склада: собственные ячейки и правила совместимости с видами отправлений.
+// Выбирает первую подходящую ячейку и размещает/извлекает записи через StorageCell.
+// План группы строится на копии ячеек, чтобы учесть общий груз без изменения живого склада.
 class StorageArea {
 public:
     StorageArea(const std::string& id, const std::string& name, StorageAreaKind kind,

@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <set>
 
+// CompensationClaim — требование возмещения утраты/повреждения: заявитель, доказательства и суммы.
+// Для утраты проверяет завершённый розыск; решение ограничено запросом и заданным лимитом.
+// CashRegister проводит выплату и помечает требование Paid; это не возврат тарифа через Refund.
 namespace post {
 // Черновик не объявляет мнимую выплату или решение.
 CompensationClaim::CompensationClaim(const std::string& id) : id_(detail::identifier(id)) {}

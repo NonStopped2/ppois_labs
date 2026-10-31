@@ -2,6 +2,9 @@
 #include "post/exceptions/TariffNotFoundException.hpp"
 #include <stdexcept>
 
+// WeightBand — цена пересылки для диапазона массы (нижняя граница, верхняя граница].
+// Базовая цена включает первый шаг; каждый дополнительный начатый шаг оплачивается отдельно.
+// TariffPlan выбирает подходящий диапазон, а priceFor() проверяет массу и считает сумму.
 namespace post {
 // Нижняя граница исключена, верхняя включена; шаг обязан быть положительным.
 WeightBand::WeightBand(std::int64_t lowerExclusiveGrams, std::int64_t upperInclusiveGrams,

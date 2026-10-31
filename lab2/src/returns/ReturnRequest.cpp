@@ -4,6 +4,9 @@
 #include "post/detail/Validation.hpp"
 #include "post/exceptions/DeliveryAuthorizationException.hpp"
 
+// ReturnRequest — запрос возврата отправителю: инициатор, причина, решение и даты.
+// Разделяет подачу, одобрение/отказ и начало возврата через PostalBranch.
+// Одобрение само не перевозит груз; исходные отправитель и получатель в Shipment не меняются.
 namespace post {
 // Черновик ещё не связан с отправлением и не содержит мнимой даты обращения.
 ReturnRequest::ReturnRequest(const std::string& id) : id_(detail::identifier(id)) {}

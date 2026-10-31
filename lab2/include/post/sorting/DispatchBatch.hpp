@@ -4,7 +4,9 @@
 #include "post/transport/PostalRoute.hpp"
 
 namespace post {
-// Неизменяемые после подготовки мешки и протокол Draft→Ready→InTransit→Received.
+// DispatchBatch — партия мешков между двумя отделениями для перевозки в TransportTrip.
+// Хранит собственные мешки; после подготовки состав не меняется и соответствует маршруту.
+// Проходит Draft → Ready → InTransit → Received; физическое выбытие проводит PostalBranch.
 class DispatchBatch {
 public:
     DispatchBatch(const std::string& id, const std::string& sourceBranchId,

@@ -3,6 +3,9 @@
 #include "post/exceptions/InvalidShipmentDataException.hpp"
 #include "post/exceptions/ShipmentLimitExceededException.hpp"
 
+// Letter — вид Shipment для письма: добавляет конверт, число листов и описание вложения.
+// Проверяет общие ограничения массы и размеров и отдельный лимит количества листов.
+// Через виртуальные методы даёт общим процессам размеры конверта и копию именно Letter.
 namespace post {
 
 // Непустое описание и положительное число листов обязательны ещё до регистрации.

@@ -4,6 +4,9 @@
 #include "post/exceptions/InvalidShipmentStateException.hpp"
 #include <algorithm>
 
+// SearchRequest — розыск: снимок истории, ожидаемые отделения и результаты физических проверок.
+// Подтверждает нахождение либо утрату; утрата согласованно отражается в реестре и складе.
+// Новое событие делает снимок устаревшим; для признания утраты нужны проверки и минимальный срок.
 namespace post {
 // Черновик ещё не содержит даты начала и не связан с чужим отправлением.
 SearchRequest::SearchRequest(const std::string& id) : id_(detail::identifier(id)) {}

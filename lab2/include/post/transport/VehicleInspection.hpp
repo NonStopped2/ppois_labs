@@ -4,7 +4,9 @@
 #include <map>
 
 namespace post {
-// Допуск действует включительно по датам; любое новое замечание отменяет прежнее одобрение.
+// VehicleInspection — допуск конкретной машины: срок, инспектор и устранение замечаний.
+// Одобрение требует подходящих полномочий и устранённых дефектов; новый дефект снимает одобрение.
+// Vehicle и TransportTrip проверяют допуск перед выездом; границы срока включены.
 class VehicleInspection {
 public:
     VehicleInspection(const std::string& id, const Vehicle& vehicle,

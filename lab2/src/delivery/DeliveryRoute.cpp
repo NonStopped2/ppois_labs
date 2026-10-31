@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <set>
 
+// DeliveryRoute — маршрут одного курьера: владеет заданиями, их порядком и датами выполнения.
+// Выбирает следующее задание и проводит попытки через DeliveryTask с изменением реестра.
+// Перестановка не меняет состав заданий; начало и возврат груза согласует Courier.
 namespace post {
 // Пустой план имеет владельца, но не мнимую дату начала.
 DeliveryRoute::DeliveryRoute(const std::string& id, const std::string& courierId)

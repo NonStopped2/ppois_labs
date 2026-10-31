@@ -4,6 +4,9 @@
 #include "post/detail/ShipmentFacts.hpp"
 #include <algorithm>
 
+// DeliveryTask — доставка одного отправления: получатель, адрес, окно, курьер и журнал попыток.
+// Проверяет время, StoragePolicy и личность при вручении; принадлежит DeliveryRoute.
+// Повтор сохраняет ID задания, реальные попытки и исходный дедлайн, а не начинает цикл заново.
 namespace post {
 // Снимок создаётся по реально хранимому отправлению с оплаченной опцией курьера.
 DeliveryTask::DeliveryTask(const std::string& id, const Shipment& shipment,

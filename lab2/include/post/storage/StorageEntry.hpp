@@ -3,7 +3,9 @@
 #include "post/storage/StoragePolicy.hpp"
 
 namespace post {
-// Не владеет отправлением: сохраняет его номер, массу, габариты и срок на момент размещения.
+// StorageEntry — запись размещения в ячейке: трек-номер, масса, размеры, приём и дедлайн.
+// Не владеет Shipment, а сохраняет снимок данных для учёта вместимости и срока хранения.
+// Создаётся только для доступного к хранению груза; по StoragePolicy считает плату.
 class StorageEntry {
 public:
     StorageEntry(const Shipment& shipment, const StoragePolicy& policy,

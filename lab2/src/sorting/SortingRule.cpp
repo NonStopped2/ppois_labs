@@ -2,6 +2,9 @@
 #include "post/detail/PostalPrefixes.hpp"
 #include <set>
 
+// SortingRule — одно правило направления: префиксы индексов, виды груза и следующее отделение.
+// matches() проверяет отправление; conflictsWith() выявляет неоднозначные правила.
+// SortingPlan выбирает подходящее правило с наибольшим приоритетом.
 namespace post {
 // Набор продуктов и покрытие проверяются без зависимости от будущего PostalBranch.
 SortingRule::SortingRule(const std::string& id, std::vector<std::string> destinationPrefixes,

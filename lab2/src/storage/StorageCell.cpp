@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <numeric>
 
+// StorageCell — складская ячейка с пределами массы, числа мест и размеров одного отправления.
+// Владеет записями StorageEntry, не самими Shipment; place() проверяет лимиты до добавления.
+// take() удаляет размещение и возвращает его снимок; используется внутри StorageArea.
 namespace post {
 // Положительные лимиты исключают неоднозначные «неограниченные» отрицательные значения.
 StorageCell::StorageCell(const std::string& id, std::int64_t maxWeightGrams, std::int64_t maxItems,

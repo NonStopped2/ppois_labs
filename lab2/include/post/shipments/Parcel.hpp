@@ -7,7 +7,9 @@
 
 namespace post {
 
-// Посылка владеет описью; после пломбирования добавление содержимого запрещено.
+// Parcel — вид Shipment для посылки: габариты, упаковка, опись ContentItem и пломба.
+// Проверяет согласованность содержимого с массой, ценностью и условиями отправления.
+// После пломбирования нельзя добавлять позиции; clone() сохраняет полный тип Parcel.
 class Parcel : public Shipment {
 public:
     Parcel(const Customer& sender, const Customer& recipient, std::int64_t weightGrams,
