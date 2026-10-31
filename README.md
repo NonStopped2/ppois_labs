@@ -86,7 +86,9 @@ python3 lab2/tools/coverage.py --build-dir build/lab2-coverage --with-ui
 
 Workflow [`.github/workflows/lab2.yml`](.github/workflows/lab2.yml)
 проверяет сборку и тесты на Linux/macOS, покрытие, качество и документацию.
-Релиз публикуется при отправке тега `lab2-v*` после успешных проверок.
+После слияния в `main` и успешных проверок автоматически публикуется полноценный
+Release с новым тегом `lab2-main-<SHA проверенного коммита>`.
+Ручные теги `lab2-vX.Y.Z` сохраняют прежний режим предварительного выпуска.
 Пакеты доступны в [Releases](https://github.com/NonStopped2/ppois_labs/releases).
 
 Релиз относится к коммиту своего тега: последующие изменения ветки
