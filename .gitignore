@@ -1,3 +1,7 @@
 build/
 .cache/
 .DS_Store
+__pycache__/
+*.profraw
+*.profdata
+/lab1/VERIFICATION.md
