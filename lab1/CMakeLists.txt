@@ -45,15 +45,21 @@ if(BUILD_TESTING)
     configure_first_party(lab1_tests)
     list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
     include(Catch)
-    catch_discover_tests(lab1_tests)
+    catch_discover_tests(lab1_tests PROPERTIES LABELS "lab1-unit")
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     add_test(NAME cli_integration COMMAND "${Python3_EXECUTABLE}"
         "${PROJECT_SOURCE_DIR}/tools/cli_tests.py"
         --cube $<TARGET_FILE:rubiks_cube> --post $<TARGET_FILE:post_machine>
         --examples "${CMAKE_CURRENT_SOURCE_DIR}/examples")
-    set_tests_properties(cli_integration PROPERTIES TIMEOUT 90)
+    set_tests_properties(cli_integration PROPERTIES LABELS "lab1-cli" TIMEOUT 90)
+    add_test(NAME lab1-tools.package COMMAND "${Python3_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/tools/test_package.py")
+    set_tests_properties(lab1-tools.package PROPERTIES LABELS "lab1-tools" TIMEOUT 30)
+    add_test(NAME lab1-tools.coverage COMMAND "${Python3_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/tools/test_coverage.py")
+    set_tests_properties(lab1-tools.coverage PROPERTIES LABELS "lab1-tools" TIMEOUT 30)
 endif()
 
-install(TARGETS rubiks_cube post_machine RUNTIME DESTINATION bin)
-install(DIRECTORY examples/ DESTINATION share/ppois_lab1/examples)
-install(FILES README.md DESTINATION share/ppois_lab1)
+install(TARGETS rubiks_cube post_machine RUNTIME DESTINATION bin COMPONENT lab1)
+install(DIRECTORY examples/ DESTINATION share/ppois_lab1/examples COMPONENT lab1)
+install(FILES README.md DESTINATION share/ppois_lab1 COMPONENT lab1)

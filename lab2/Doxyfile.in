@@ -1,0 +1,23 @@
+PROJECT_NAME           = "PPOIS Laboratory 2: Post"
+OUTPUT_DIRECTORY       = "@CMAKE_CURRENT_BINARY_DIR@/docs"
+INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/include" \
+                         "@CMAKE_CURRENT_SOURCE_DIR@/src" \
+                         "@CMAKE_CURRENT_SOURCE_DIR@/app" \
+                         "@CMAKE_CURRENT_SOURCE_DIR@/README.md" \
+                         "@CMAKE_CURRENT_SOURCE_DIR@/CLI.md" \
+                         "@CMAKE_CURRENT_SOURCE_DIR@/BEHAVIORS.md" \
+                         "@CMAKE_CURRENT_SOURCE_DIR@/CI.md"
+USE_MDFILE_AS_MAINPAGE  = "@CMAKE_CURRENT_SOURCE_DIR@/README.md"
+RECURSIVE              = YES
+FILE_PATTERNS          = *.hpp *.cpp *.md
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+HAVE_DOT               = NO
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_AS_ERROR          = YES
+OUTPUT_LANGUAGE        = English
+FULL_PATH_NAMES        = NO

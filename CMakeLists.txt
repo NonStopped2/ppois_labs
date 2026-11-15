@@ -12,6 +12,7 @@ if(ENABLE_COVERAGE AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 include(CTest)
 add_subdirectory(lab1)
+add_subdirectory(lab2)
 
 find_package(Doxygen QUIET)
 if(DOXYGEN_FOUND)

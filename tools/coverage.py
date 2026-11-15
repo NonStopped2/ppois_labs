@@ -67,6 +67,14 @@ def enforce(files):
                        for value in groups.values())
 
 
+def run_tests(build, profiles, unit_only=False):
+    environment = dict(os.environ, LLVM_PROFILE_FILE=str(profiles / "%p-%m.profraw"))
+    # Профили другой лабораторной не должны попадать даже в unit-only запуск lab1.
+    selection = "^lab1-unit$" if unit_only else "^lab1-(unit|cli)$"
+    subprocess.run(["ctest", "--test-dir", str(build), "-L", selection,
+                    "--no-tests=error", "--output-on-failure"], env=environment, check=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build-dir", type=Path, required=True)
@@ -77,11 +85,7 @@ def main():
     output = build / ("unit-coverage" if args.unit_only else "coverage")
     output.mkdir(parents=True, exist_ok=True)
     profiles = Path(tempfile.mkdtemp(prefix="raw-", dir=output))
-    environment = dict(os.environ, LLVM_PROFILE_FILE=str(profiles / "%p-%m.profraw"))
-    test_command = ["ctest", "--test-dir", str(build), "--output-on-failure"]
-    if args.unit_only:
-        test_command.extend(["-E", "cli_integration"])
-    subprocess.run(test_command, env=environment, check=True)
+    run_tests(build, profiles, args.unit_only)
     raw = sorted(profiles.glob("*.profraw"))
     if not raw:
         raise RuntimeError("No profiles: configure with ENABLE_COVERAGE=ON")

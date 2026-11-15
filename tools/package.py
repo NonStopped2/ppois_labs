@@ -8,6 +8,12 @@ import subprocess
 import tempfile
 
 
+def install_application(build, stage):
+    # Совместная сборка содержит несколько работ; пакет lab1 не должен включать lab2.
+    subprocess.run(["cmake", "--install", str(build), "--prefix", str(stage),
+                    "--component", "lab1"], check=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build-dir", required=True, type=Path)
@@ -22,7 +28,7 @@ def main():
     name = f"ppois-lab1-{system}-{platform.machine().lower()}"
     workspace = Path(tempfile.mkdtemp(prefix="stage-", dir=output))
     stage = workspace / name
-    subprocess.run(["cmake", "--install", str(build), "--prefix", str(stage)], check=True)
+    install_application(build, stage)
     examples = stage / "share" / "ppois_lab1" / "examples"
     post = subprocess.run([str(stage / "bin" / "post_machine"), str(examples / "post_mark_right.txt")],
                           capture_output=True, text=True, check=True, timeout=20)
