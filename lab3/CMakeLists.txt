@@ -33,6 +33,15 @@ add_library(shop_core
     src/delivery/DeliveryPolicy.cpp
     src/pricing/PriceQuote.cpp
     src/pricing/PricingPolicy.cpp
+    src/orders/OrderLine.cpp
+    src/orders/OrderEvent.cpp
+    src/orders/Order.cpp
+    src/orders/OrderBook.cpp
+    src/payments/PaymentAttempt.cpp
+    src/payments/Payment.cpp
+    src/payments/Refund.cpp
+    src/payments/PaymentBook.cpp
+    src/delivery/Fulfillment.cpp
 )
 target_include_directories(shop_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_compile_features(shop_core PUBLIC cxx_std_20)
@@ -76,7 +85,10 @@ if(BUILD_TESTING)
         tests/pricing/PromotionTests.cpp
         tests/inventory/InventoryTests.cpp
         tests/cart/CartTests.cpp
-        tests/pricing/QuoteTests.cpp)
+        tests/pricing/QuoteTests.cpp
+        tests/orders/OrderTests.cpp
+        tests/payments/PaymentTests.cpp
+        tests/delivery/FulfillmentTests.cpp)
     target_link_libraries(shop_core_tests PRIVATE shop_core Catch2::Catch2WithMain)
     list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
     include(Catch)

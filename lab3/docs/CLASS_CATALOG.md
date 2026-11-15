@@ -42,7 +42,17 @@
 | PriceQuote | customerId, lines, deliveryAddress, deliveryOptionId, deliveryFee, discountSource, createdAt, validUntil, total, returnPolicySnapshot | assertUsable, sameCommercialTerms | QuoteLine, Address, Money, ReturnPolicy |
 | PricingPolicy | quoteLifetime, maximumCartUnits, preferLoyaltyOnTie | makeQuote, selectDiscount, allocateDiscount | Cart, Customer, PricingContext, PriceQuote |
 
-Итого на этом этапе: **34 класса, 155 собственных полей**.
+| OrderLine | sku, title, quantity, unitPrice, allocation, netTotal, weightGrams, attributesSnapshot, dimensionsMm, returnEligible | Снимок покупки, asQuoteLine для расчёта доставки без каталога | QuoteLine, Money, DiscountAllocation |
+| OrderEvent | timestamp, kind, operationId, relatedEntityId, description, payload | Типизированное событие; исходные условия и изменения без разбора текста | Address, Money |
+| Order | id, customerId, lines, deliveryAddress, deliveryOptionId, deliveryFee, discountSource, createdAt, paymentDeadline, reservationId, status, history, returnPolicySnapshot, deadlineExtended | confirmPayment, cancel, expire, beginFulfillment, markShipped, markDelivered, extendPaymentDeadline, changeUnpaidDelivery, recordReturnCompleted, stateBefore | OrderLine, OrderEvent, Address, Money, ReturnPolicy |
+| OrderBook | orders, customerOrderIndex, revision | add, replace, customerHistory, selectForPeriod, findOverdueUnpaid; неизменяемые shared_ptr-снимки | Order |
+| PaymentAttempt | id, orderId, amount, method, createdAt, status, failureReason | succeed, decline; один конечный результат попытки | Money |
+| Payment | id, attemptId, orderId, capturedAmount, capturedAt, refundIds | refundedTotal, assertRefundWithinBalance | PaymentAttempt, Refund, Money |
+| Refund | id, operationId, paymentId, orderId, returnRequestId, amount, createdAt | Неизменяемый положительный финансовый документ | Money |
+| PaymentBook | attempts, payments, refunds, operationIndex | recordAttempt, refund, reconcileOrderBalance, attemptOutcomeAnalysis; повтор с теми же данными без нового эффекта | Order, PaymentAttempt, Payment, Refund |
+| Fulfillment | id, orderId, warehouseId, requiredQuantities, pickedQuantities, status, trackingNumber, deliveredAt | startPicking, pick, undoPick, pack, reopenPicking, handover, deliver, cancel | Order |
+
+Итого на этом этапе: **43 класса, 220 собственных полей**.
 Не все перечисленные методы считаются уникальными предметными поведениями:
 арифметика Money, валидация и прямые операции редактирования не используются
 для искусственного достижения требования о 100 поведениях.
@@ -69,5 +79,8 @@
 - `DeliveryRuleException` — недоступный способ доставки.
 - `ReturnRuleException` — нарушены условия возврата покупки.
 - `QuoteChangedException` — истекшее либо изменившееся предложение.
+- `OrderStateException` — чужой заказ, неверная фаза либо хронология заказа.
+- `PaymentRuleException` — неверная сумма/документ оплаты или превышение возвратного остатка.
+- `FulfillmentStateException` — неверная фаза комплектации или количество подбора.
 
 Все эти типы покрыты тестами реальных ошибок, а не только тестом конструктора.
