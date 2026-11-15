@@ -3,6 +3,8 @@
 #include "shop/orders/OrderEvent.hpp"
 #include "shop/payments/PaymentBook.hpp"
 #include "shop/pricing/PriceQuote.hpp"
+#include "shop/returns/InspectionResult.hpp"
+#include "shop/returns/ReturnLine.hpp"
 #include <map>
 #include <optional>
 #include <variant>
@@ -24,7 +26,14 @@ enum class CommandKind {
     ExtendPayment,
     ChangeDelivery,
     RepeatOrder,
-    MoveToWishlist
+    MoveToWishlist,
+    OpenReturn,
+    InspectReturn,
+    RejectReturn,
+    WithdrawReturn,
+    CompleteReturn,
+    AmendReturn,
+    ExpireReturn
 };
 /** Actual canonical values, not just hashes, protect against operation-ID reuse. */
 struct CommandSignature {
@@ -35,9 +44,11 @@ struct CommandSignature {
     std::vector<std::int64_t> numbers;
     std::optional<DeliveryTerms> delivery;
     std::optional<PriceQuote> quote;
+    std::vector<ReturnSelection> returnSelections{};
+    std::vector<InspectionResult> inspectionResults{};
     bool operator==(const CommandSignature&) const = default;
 };
-using OperationResult = std::variant<std::monostate, std::string, AttemptOutcome>;
+using OperationResult = std::variant<std::monostate, std::string, AttemptOutcome, Money>;
 struct OperationRecord {
     CommandSignature signature;
     OperationResult result;

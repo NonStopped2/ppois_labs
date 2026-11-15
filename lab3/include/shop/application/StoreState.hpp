@@ -5,6 +5,8 @@
 #include "shop/delivery/Fulfillment.hpp"
 #include "shop/orders/OrderBook.hpp"
 #include "shop/pricing/PricingPolicy.hpp"
+#include "shop/returns/ReturnInspection.hpp"
+#include "shop/returns/ReturnRequest.hpp"
 
 namespace shop {
 /** Technical owner, not another class added to the domain counter. */
@@ -42,6 +44,8 @@ class StoreState {
     const PaymentBook& payments() const noexcept;
     const std::map<std::string, Fulfillment>& fulfillments() const noexcept;
     const OperationJournal& operations() const noexcept;
+    const std::map<std::string, ReturnRequest>& returnRequests() const noexcept;
+    const std::map<std::string, ReturnInspection>& inspections() const noexcept;
     const PricingPolicy& pricingPolicy() const noexcept;
     const DeliveryPolicy& deliveryPolicy() const noexcept;
     PricingContext pricingContext(std::string_view customerId) const;
@@ -66,6 +70,8 @@ class StoreState {
     OrderBook orders_;
     PaymentBook payments_;
     std::map<std::string, Fulfillment> fulfillments_;
+    std::map<std::string, ReturnRequest> returnRequests_;
+    std::map<std::string, ReturnInspection> inspections_;
     OperationJournal operations_;
     ManualClock clock_;
     PricingPolicy pricingPolicy_;

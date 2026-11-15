@@ -2,6 +2,9 @@
 #include "shop/common/Lookup.hpp"
 #include "shop/common/ReturnRuleException.hpp"
 #include "shop/common/Validation.hpp"
+#include "shop/orders/Order.hpp"
+#include "shop/returns/ReturnInspection.hpp"
+#include "shop/returns/ReturnRequest.hpp"
 #include <algorithm>
 
 namespace shop {
@@ -58,5 +61,28 @@ bool ReturnPolicy::classifyRestockability(ItemCondition condition) const {
                         condition == ItemCondition::Incomplete,
                     "Неизвестное состояние товара");
     return restockableConditions_.contains(condition);
+}
+Money ReturnPolicy::calculateRefund(
+    const Order& order, const ReturnRequest& request, const ReturnInspection& inspection,
+    const std::map<std::string, std::int64_t>& completedQuantities) const {
+    detail::check<ReturnRuleException>(order.id() == request.orderId() &&
+                                           request.customerId() == order.customerId() &&
+                                           inspection.requestId() == request.id() &&
+                                           inspection.finalized() && *this == order.returnPolicy(),
+                                       "Возвратные документы не согласованы с покупкой");
+    Money result;
+    for (const auto& entry : request.lines()) {
+        const auto purchased = order.line(entry.sku());
+        const auto prior = completedQuantities.find(entry.sku());
+        const auto offset = prior == completedQuantities.end() ? 0 : prior->second;
+        const auto& inspected = detail::get(inspection.results(), entry.sku());
+        detail::check<ReturnRuleException>(offset == entry.alreadyReturnedOffset() &&
+                                               inspected.acceptedQuantity() <=
+                                                   entry.requestedQuantity(),
+                                           "Количество изменилось после открытия заявки");
+        result = result.checkedAdd(
+            purchased.allocation().netForUnitRange(offset, inspected.acceptedQuantity()));
+    }
+    return result;
 }
 } // namespace shop

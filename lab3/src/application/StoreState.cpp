@@ -167,6 +167,12 @@ const std::map<std::string, Fulfillment>& StoreState::fulfillments() const noexc
 const OperationJournal& StoreState::operations() const noexcept {
     return operations_;
 }
+const std::map<std::string, ReturnRequest>& StoreState::returnRequests() const noexcept {
+    return returnRequests_;
+}
+const std::map<std::string, ReturnInspection>& StoreState::inspections() const noexcept {
+    return inspections_;
+}
 const PricingPolicy& StoreState::pricingPolicy() const noexcept {
     return pricingPolicy_;
 }

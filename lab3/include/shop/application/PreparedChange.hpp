@@ -37,7 +37,8 @@ class PreparedChange {
         : orders_(state.orders_), inventory_(state.inventory_), coupons_(state.coupons_),
           payments_(state.payments_), carts_(state.carts_), wishlists_(state.wishlists_),
           loyalty_(state.loyaltyAccounts_), fulfillments_(state.fulfillments_),
-          operations_(state.operations_) {}
+          operations_(state.operations_), returns_(state.returnRequests_),
+          inspections_(state.inspections_) {}
     PreparedChange(const PreparedChange&) = delete;
     PreparedChange& operator=(const PreparedChange&) = delete;
     OrderBook& orders() {
@@ -67,6 +68,12 @@ class PreparedChange {
     OperationJournal& operations() {
         return operations_.write();
     }
+    std::map<std::string, ReturnRequest>& returns() {
+        return returns_.write();
+    }
+    std::map<std::string, ReturnInspection>& inspections() {
+        return inspections_.write();
+    }
     void commit() noexcept {
         if (committed_) {
             return;
@@ -80,6 +87,8 @@ class PreparedChange {
         loyalty_.commit();
         fulfillments_.commit();
         operations_.commit();
+        returns_.commit();
+        inspections_.commit();
         committed_ = true;
     }
 
@@ -93,6 +102,8 @@ class PreparedChange {
     detail::StagedValue<std::map<std::string, LoyaltyAccount>> loyalty_;
     detail::StagedValue<std::map<std::string, Fulfillment>> fulfillments_;
     detail::StagedValue<OperationJournal> operations_;
+    detail::StagedValue<std::map<std::string, ReturnRequest>> returns_;
+    detail::StagedValue<std::map<std::string, ReturnInspection>> inspections_;
     bool committed_ = false;
 };
 } // namespace shop

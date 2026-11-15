@@ -55,7 +55,13 @@
 | Checkout | — (только служебная ссылка StoreState) | preview, placeOrder, expireUnpaidOrders, moveCartItemsToWishlist; атомарное согласование корзины, купона, заказа и резерва | StoreState, PriceQuote, Inventory, OrderBook, CouponBook, Cart, Wishlist |
 | OrderProcessing | — (только служебная ссылка StoreState) | pay, cancel, startPicking, pick, undoPick, pack, reopenPicking, dispatch, confirmDelivery, extendPaymentDeadline, changeUnpaidDelivery, repeatOrder | StoreState, Order, Fulfillment, Inventory, PaymentBook, LoyaltyAccount |
 
-Итого на этом этапе: **45 классов, 220 собственных полей**.
+| ReturnLine | sku, requestedQuantity, alreadyReturnedOffset, reason, maximumRefund | Снимок запроса следующего диапазона единиц по точной стоимости покупки | OrderLine, Money |
+| ReturnRequest | id, orderId, customerId, lines, createdAt, deadline, status, inspectionId, refundId, decisionReason | amend, attachInspection, withdraw, reject, complete; один исход заявки | Order, ReturnLine, ReturnInspection |
+| InspectionResult | sku, receivedQuantity, acceptedQuantity, restockQuantity, condition | assertConsistent; различает принятый брак и пригодный товар | — |
+| ReturnInspection | id, requestId, receivedAt, results, finalized | recordResult, finalize; полное получение, неизменяемый окончательный результат | ReturnRequest, InspectionResult, ReturnPolicy |
+| ReturnProcessing | — (только служебная ссылка StoreState) | open, inspect, reject, withdraw, complete, amendSubmitted, closeExpiredUnreceived, completedQuantities | StoreState, Order, ReturnRequest, ReturnInspection, PaymentBook, Inventory, LoyaltyAccount |
+
+Итого на этом этапе: **50 классов, 245 собственных полей**.
 Не все перечисленные методы считаются уникальными предметными поведениями:
 арифметика Money, валидация и прямые операции редактирования не используются
 для искусственного достижения требования о 100 поведениях.

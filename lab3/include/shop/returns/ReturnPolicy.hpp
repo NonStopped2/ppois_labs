@@ -1,11 +1,16 @@
 #pragma once
 #include "shop/catalog/ProductCatalog.hpp"
+#include "shop/common/Money.hpp"
 #include "shop/common/TimeWindow.hpp"
+#include <map>
 #include <set>
 #include <string>
 #include <string_view>
 
 namespace shop {
+class Order;
+class ReturnRequest;
+class ReturnInspection;
 enum class ReturnReason { ChangedMind, Defective, WrongItem };
 enum class ItemCondition { Unopened, Opened, Defective, Incomplete };
 inline constexpr std::int64_t DefaultReturnWindowSeconds = 14 * 24 * 60 * 60;
@@ -29,6 +34,9 @@ class ReturnPolicy {
     void assertEligible(bool purchasedEligibility, Timestamp deliveredAt, ReturnReason reason,
                         Timestamp now) const;
     bool classifyRestockability(ItemCondition condition) const;
+    Money calculateRefund(const Order& order, const ReturnRequest& request,
+                          const ReturnInspection& inspection,
+                          const std::map<std::string, std::int64_t>& completedQuantities) const;
     bool operator==(const ReturnPolicy&) const = default;
 
   private:
