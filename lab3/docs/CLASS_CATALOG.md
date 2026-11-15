@@ -27,8 +27,16 @@
 | Promotion | id, name, kind, value, minimumSubtotal, window, categoryIds, automatic, enabled | eligibleLines, calculateDiscount, assertApplicable | TimeWindow, Money, QuoteLine, ProductCatalog |
 | Coupon | code, promotionId, totalUseLimit, perCustomerLimit, window, enabled | normalizeCode, assertRedeemable | TimeWindow, Customer |
 | CouponBook | coupons, heldUses, confirmedUses | registerCode, reserveUse, confirmUse, releaseUse, disableCode, usageSummary | Coupon, Promotion, Customer |
+| Warehouse | id, name, address, acceptingReceipts | Режим приёма поставок и идентичность склада | Address |
+| StockItem | sku, onHand, reserved, reorderPoint | receive, hold, release, consumeHeld, applyCount | — |
+| StockReservation | id, orderId, warehouseId, quantities, createdAt, expiresAt, status, changedAt | confirm, consume, release, expire, extend; монотонность времени | — |
+| ReceiptLine | sku, quantity, purchaseUnitCost, batchReference | Неизменяемая строка прихода, безопасная стоимость | Money |
+| StockReceipt | id, supplierReference, warehouseId, lines, status | addLine, mergeDuplicateSku, validateForPosting, sameDocument | ReceiptLine |
+| Inventory | warehouse, items, reservations, postedReceipts | postReceipt, reserve, confirm, extend, release, expire, consume, restock, applyStockCount, replenishmentNeeds, auditReservations | Warehouse, StockItem, StockReservation, StockReceipt, ProductCatalog |
+| CartLine | sku, quantity, addedAt | Неизменяемая позиция без фиксированной цены | — |
+| Cart | id, customerId, lines, couponCode, revision | addItem, changeQuantity, removeItem, mergeWishlist, removeUnavailable, replaceVariant, adjustToAvailableStock, assertCheckoutReady | CartLine, ProductCatalog, Wishlist, Inventory |
 
-Итого на этом этапе: **21 класс, 91 собственное поле**.
+Итого на этом этапе: **29 классов, 128 собственных полей**.
 Не все перечисленные методы считаются уникальными предметными поведениями:
 арифметика Money, валидация и прямые операции редактирования не используются
 для искусственного достижения требования о 100 поведениях.
@@ -49,5 +57,8 @@
 - `CustomerRestrictedException` — ограниченные покупки и неверный переход ограничения.
 - `DuplicateOperationException` — повтор операции с иными данными.
 - `PromotionRuleException` — неприменимая акция, недоступный/исчерпанный купон.
+- `InsufficientStockException` — недостаточно свободного остатка либо пересчёт уничтожает резерв.
+- `ReservationStateException` — недопустимое состояние/время резерва.
+- `CartRuleException` — пустая, чужая, переполненная корзина или недоступный вариант.
 
 Все эти типы покрыты тестами реальных ошибок, а не только тестом конструктора.
