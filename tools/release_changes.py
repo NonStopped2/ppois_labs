@@ -6,7 +6,7 @@ import re
 import subprocess
 
 
-LABS = frozenset({"lab1", "lab2"})
+LABS = frozenset({"lab1", "lab2", "lab3"})
 SHARED_FILES = frozenset({
     "CMakeLists.txt", "CMakePresets.json", ".clang-format", ".clang-tidy", ".gitmodules",
     "tools/release_changes.py", "tools/test_release_changes.py", "tools/test_release_workflow.py",
@@ -23,6 +23,8 @@ def affected_labs(paths):
             affected.add("lab1")
         elif path.startswith("lab2/") or path == ".github/workflows/lab2.yml":
             affected.add("lab2")
+        elif path.startswith("lab3/") or path == ".github/workflows/lab3.yml":
+            affected.add("lab3")
         elif path.startswith("tools/"):
             affected.add("lab1")
         elif path.startswith(".github/workflows/"):

@@ -40,3 +40,8 @@ ctest --test-dir build/lab3 -L '^lab3-unit$' --output-on-failure
 `python3 lab3/tools/coverage.py --build-dir build/lab3` после сборки с покрытием.
 Сбор профилей ограничен C++ unit-тестами lab3; тесты предыдущих работ и CLI
 не увеличивают показатель. Знаменатель включает `src/` и исполняемые строки `include/`.
+
+Отдельный workflow `.github/workflows/lab3.yml` запускает C++ тесты с ASan/UBSan
+на Linux/macOS, проверяет качество и порог покрытия. Публикация пакета будет
+подключена после реализации приложения; текущий workflow ещё не означает
+выполнения всех релизных требований.

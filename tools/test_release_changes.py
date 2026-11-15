@@ -21,19 +21,22 @@ class ReleaseScopeTests(unittest.TestCase):
             ("lab2/src/core/Money.cpp", {"lab2"}),
             ("lab2/tools/package.py", {"lab2"}),
             (".github/workflows/lab2.yml", {"lab2"}),
+            ("lab3/src/catalog/Product.cpp", {"lab3"}),
+            ("lab3/README.md", {"lab3"}),
+            (".github/workflows/lab3.yml", {"lab3"}),
         ):
             with self.subTest(path=path):
                 self.assertEqual(release_changes.affected_labs([path]), expected)
 
-    def test_shared_build_and_release_infrastructure_affects_both(self):
+    def test_shared_build_and_release_infrastructure_affects_all_labs(self):
         for path in (*release_changes.SHARED_FILES, "cmake/dependencies.cmake",
                      ".github/actions/setup/action.yml", ".github/workflows/shared.yml"):
             with self.subTest(path=path):
-                self.assertEqual(release_changes.affected_labs([path]), {"lab1", "lab2"})
+                self.assertEqual(release_changes.affected_labs([path]), {"lab1", "lab2", "lab3"})
 
     def test_unrelated_changes_do_not_publish_either_lab(self):
         self.assertEqual(release_changes.affected_labs([
-            "README.md", "AGENTS.md", ".gitignore", "lab3/README.md", "lab4/main.cpp",
+            "README.md", "AGENTS.md", ".gitignore", "lab4/main.cpp",
         ]), set())
         self.assertEqual(release_changes.affected_labs([]), set())
 
@@ -82,7 +85,7 @@ class ReleaseScopeTests(unittest.TestCase):
                             BEFORE_SHA=before, RELEASE_SHA=after, GITHUB_OUTPUT=str(output)):
                 with patch.object(release_changes, "detect_changed_labs", return_value={"lab2"}):
                     release_changes.main()
-            self.assertEqual(output.read_text(), "lab1=false\nlab2=true\n")
+            self.assertEqual(output.read_text(), "lab1=false\nlab2=true\nlab3=false\n")
 
     def test_merge_and_squash_include_complete_topic_changes(self):
         for mode in ("--no-ff", "--squash"):
