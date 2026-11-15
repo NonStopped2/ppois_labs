@@ -10,7 +10,8 @@ constexpr auto Maximum = std::numeric_limits<std::int64_t>::max();
 constexpr std::int64_t BasisPointScale = 10000;
 
 // Long division keeps intermediate products representable even near INT64_MAX.
-std::uint64_t fraction(std::uint64_t value, std::uint64_t numerator, std::uint64_t divisor) {
+std::pair<std::uint64_t, std::uint64_t> fraction(std::uint64_t value, std::uint64_t numerator,
+                                                 std::uint64_t divisor) {
     std::uint64_t quotient = 0;
     std::uint64_t remainder = 0;
     for (int bit = 62; bit >= 0; --bit) {
@@ -28,7 +29,7 @@ std::uint64_t fraction(std::uint64_t value, std::uint64_t numerator, std::uint64
             }
         }
     }
-    return quotient;
+    return {quotient, remainder};
 }
 } // namespace
 
@@ -65,9 +66,15 @@ Money Money::multiply(std::int64_t quantity) const {
 }
 
 Money Money::fractionFloor(std::int64_t numerator, std::int64_t denominator) const {
+    return fractionParts(numerator, denominator).first;
+}
+
+std::pair<Money, std::int64_t> Money::fractionParts(std::int64_t numerator,
+                                                    std::int64_t denominator) const {
     detail::require(kopecks_ >= 0 && denominator > 0 && numerator >= 0 && numerator <= denominator,
                     "Некорректная доля денежной суммы");
-    return Money(static_cast<std::int64_t>(fraction(kopecks_, numerator, denominator)));
+    const auto [quotient, remainder] = fraction(kopecks_, numerator, denominator);
+    return {Money(static_cast<std::int64_t>(quotient)), static_cast<std::int64_t>(remainder)};
 }
 
 Money Money::percentageFloor(std::int64_t basisPoints) const {

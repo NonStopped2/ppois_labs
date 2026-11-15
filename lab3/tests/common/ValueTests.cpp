@@ -38,6 +38,8 @@ TEST_CASE("Money fractions agree with independent small-integer products") {
             for (std::int64_t numerator = 0; numerator <= divisor; ++numerator) {
                 REQUIRE(Money(amount).fractionFloor(numerator, divisor).kopecks() ==
                         amount * numerator / divisor);
+                REQUIRE(Money(amount).fractionParts(numerator, divisor).second ==
+                        amount * numerator % divisor);
             }
         }
     }

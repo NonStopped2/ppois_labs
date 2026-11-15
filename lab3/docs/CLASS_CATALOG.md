@@ -36,7 +36,13 @@
 | CartLine | sku, quantity, addedAt | Неизменяемая позиция без фиксированной цены | — |
 | Cart | id, customerId, lines, couponCode, revision | addItem, changeQuantity, removeItem, mergeWishlist, removeUnavailable, replaceVariant, adjustToAvailableStock, assertCheckoutReady | CartLine, ProductCatalog, Wishlist, Inventory |
 
-Итого на этом этапе: **29 классов, 128 собственных полей**.
+| ReturnPolicy | returnWindow, nonReturnableCategories, allowedReasons, restockableConditions | returnEligible, assertEligible, deadline, classifyRestockability; снимок правил покупки | ProductCatalog |
+| DeliveryOption | id, name, postalPrefixes, maximumWeightGrams, maximumDimensionMm, baseFee, freeFromSubtotal | accepts, calculateFee | Address, QuoteLine, Money |
+| DeliveryPolicy | options, handlingDuration, transitDurationByOption | eligibleOptions, cheapestEligible, estimateArrival | DeliveryOption, Address, QuoteLine, TimeWindow |
+| PriceQuote | customerId, lines, deliveryAddress, deliveryOptionId, deliveryFee, discountSource, createdAt, validUntil, total, returnPolicySnapshot | assertUsable, sameCommercialTerms | QuoteLine, Address, Money, ReturnPolicy |
+| PricingPolicy | quoteLifetime, maximumCartUnits, preferLoyaltyOnTie | makeQuote, selectDiscount, allocateDiscount | Cart, Customer, PricingContext, PriceQuote |
+
+Итого на этом этапе: **34 класса, 155 собственных полей**.
 Не все перечисленные методы считаются уникальными предметными поведениями:
 арифметика Money, валидация и прямые операции редактирования не используются
 для искусственного достижения требования о 100 поведениях.
@@ -60,5 +66,8 @@
 - `InsufficientStockException` — недостаточно свободного остатка либо пересчёт уничтожает резерв.
 - `ReservationStateException` — недопустимое состояние/время резерва.
 - `CartRuleException` — пустая, чужая, переполненная корзина или недоступный вариант.
+- `DeliveryRuleException` — недоступный способ доставки.
+- `ReturnRuleException` — нарушены условия возврата покупки.
+- `QuoteChangedException` — истекшее либо изменившееся предложение.
 
 Все эти типы покрыты тестами реальных ошибок, а не только тестом конструктора.

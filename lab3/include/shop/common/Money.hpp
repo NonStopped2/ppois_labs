@@ -3,6 +3,7 @@
 #include <compare>
 #include <cstdint>
 #include <string>
+#include <utility>
 
 namespace shop {
 
@@ -15,6 +16,8 @@ class Money {
     Money checkedSubtract(Money other) const;
     Money multiply(std::int64_t quantity) const;
     Money fractionFloor(std::int64_t numerator, std::int64_t denominator) const;
+    std::pair<Money, std::int64_t> fractionParts(std::int64_t numerator,
+                                                 std::int64_t denominator) const;
     Money percentageFloor(std::int64_t basisPoints) const;
     std::string format() const;
     auto operator<=>(const Money&) const = default;

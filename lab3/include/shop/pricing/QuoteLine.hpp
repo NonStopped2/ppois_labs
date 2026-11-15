@@ -31,6 +31,7 @@ class QuoteLine {
     Money netTotal() const noexcept;
     const PackageSnapshot& packageSnapshot() const noexcept;
     bool returnEligible() const noexcept;
+    QuoteLine withDiscount(Money amount) const;
     bool operator==(const QuoteLine&) const = default;
 
   private:

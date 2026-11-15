@@ -37,4 +37,12 @@ bool QuoteLine::returnEligible() const noexcept {
     return returnEligible_;
 }
 
+QuoteLine QuoteLine::withDiscount(Money amount) const {
+    auto candidate = *this;
+    candidate.allocation_ =
+        DiscountAllocation(sku_, quantity_, unitPrice_.multiply(quantity_), amount);
+    candidate.netTotal_ = candidate.allocation_.netTotal();
+    return candidate;
+}
+
 } // namespace shop
