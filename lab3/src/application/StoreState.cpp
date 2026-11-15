@@ -212,4 +212,7 @@ void StoreState::moderateReview(std::string_view reviewId, bool publish, std::st
 void StoreState::voteHelpful(std::string_view actor, std::string_view reviewId) {
     reviews_.voteHelpful(reviewId, customer(actor));
 }
+ReportContext StoreState::reportContext() const {
+    return {orders_, payments_, returnRequests_, inspections_, customers_, now()};
+}
 } // namespace shop

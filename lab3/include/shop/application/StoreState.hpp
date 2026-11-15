@@ -6,6 +6,7 @@
 #include "shop/delivery/Fulfillment.hpp"
 #include "shop/orders/OrderBook.hpp"
 #include "shop/pricing/PricingPolicy.hpp"
+#include "shop/reporting/SalesReport.hpp"
 #include "shop/returns/ReturnInspection.hpp"
 #include "shop/returns/ReturnRequest.hpp"
 
@@ -57,6 +58,7 @@ class StoreState {
     const PricingPolicy& pricingPolicy() const noexcept;
     const DeliveryPolicy& deliveryPolicy() const noexcept;
     PricingContext pricingContext(std::string_view customerId) const;
+    ReportContext reportContext() const;
     bool operator==(const StoreState&) const = default;
 
   private:

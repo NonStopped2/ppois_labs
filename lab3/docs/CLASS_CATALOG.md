@@ -64,7 +64,11 @@
 | ProductReview | id, customerId, productId, orderId, rating, text, moderationStatus, helpfulVoters | edit, publish, hide, voteHelpful; редактирование сбрасывает голоса и модерацию | Customer |
 | ReviewBook | reviews, purchaseReviewIndex, revision | addVerifiedReview, moderate, ratingSummary, verifiedReviewsFor; один отзыв на пару покупатель/продукт | ProductReview, Customer, Order, Product |
 
-Итого на этом этапе: **52 класса, 256 собственных полей**.
+| SalesReport | period, captured, refunded, deliveryRevenue, deliveredNetGoods, skuStatistics, orderStatusCounts | buildFinancialSummary, buildSkuSummary, returnRate, averageOrderValue, reconcile, abcAnalysis, qualityAnalysis, repeatPurchaseRate, rfmSegments, promotionUsageAnalysis | TimeWindow, Money, OrderBook, PaymentBook, ReturnRequest, ReturnInspection, Customer |
+
+Итого на этом этапе: **53 класса, 263 собственных поля**.
+Это ещё не подтверждение всех количественных требований: независимая сверка
+уникальных поведений и требований сдачи выполняется после завершения приложения.
 `ProductCatalog::compareProducts` строит матрицу типов/значений характеристик,
 диапазонов установленных цен и свободных количеств. Отсутствующая цена не равна нулю.
 Не все перечисленные методы считаются уникальными предметными поведениями:
