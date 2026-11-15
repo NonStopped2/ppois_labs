@@ -2,14 +2,33 @@
 
 #include "shop/catalog/Category.hpp"
 #include "shop/catalog/Product.hpp"
+#include "shop/common/Money.hpp"
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace shop {
+class PriceList;
+class Inventory;
+struct ComparisonColumn {
+    std::string title;
+    std::optional<std::pair<Money, Money>> priceRange;
+    std::map<std::string, std::int64_t> availableBySku;
+};
+struct ComparisonAttribute {
+    bool comparable = true;
+    std::map<std::string, std::optional<AttributeKind>> kinds;
+    std::map<std::string, std::set<std::string>> values;
+};
+struct ProductComparison {
+    std::map<std::string, ComparisonColumn> products;
+    std::map<std::string, ComparisonAttribute> attributes;
+};
 
 /** Owns the catalog and enforces tree integrity and global SKU uniqueness. */
 class ProductCatalog {
@@ -32,6 +51,8 @@ class ProductCatalog {
     findCompatibleVariants(std::string_view productId,
                            const std::map<std::string, std::string>& attributes) const;
     bool isInCategory(std::string_view categoryId, std::string_view ancestorId) const;
+    ProductComparison compareProducts(const std::vector<std::string>& productIds,
+                                      const PriceList& prices, const Inventory& inventory) const;
     Product product(std::string_view productId) const;
     Product productForSku(std::string_view sku) const;
     ProductVariant variant(std::string_view sku) const;

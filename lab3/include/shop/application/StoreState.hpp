@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shop/application/OperationRecord.hpp"
+#include "shop/catalog/ReviewBook.hpp"
 #include "shop/customers/AddressBook.hpp"
 #include "shop/delivery/Fulfillment.hpp"
 #include "shop/orders/OrderBook.hpp"
@@ -46,6 +47,13 @@ class StoreState {
     const OperationJournal& operations() const noexcept;
     const std::map<std::string, ReturnRequest>& returnRequests() const noexcept;
     const std::map<std::string, ReturnInspection>& inspections() const noexcept;
+    const ReviewBook& reviews() const noexcept;
+    std::string addReview(std::string_view actor, std::string_view orderId,
+                          std::string_view productId, int rating, std::string_view text);
+    void editReview(std::string_view actor, std::string_view reviewId, int rating,
+                    std::string_view text);
+    void moderateReview(std::string_view reviewId, bool publish, std::string_view reason = {});
+    void voteHelpful(std::string_view actor, std::string_view reviewId);
     const PricingPolicy& pricingPolicy() const noexcept;
     const DeliveryPolicy& deliveryPolicy() const noexcept;
     PricingContext pricingContext(std::string_view customerId) const;
@@ -72,6 +80,7 @@ class StoreState {
     std::map<std::string, Fulfillment> fulfillments_;
     std::map<std::string, ReturnRequest> returnRequests_;
     std::map<std::string, ReturnInspection> inspections_;
+    ReviewBook reviews_;
     OperationJournal operations_;
     ManualClock clock_;
     PricingPolicy pricingPolicy_;

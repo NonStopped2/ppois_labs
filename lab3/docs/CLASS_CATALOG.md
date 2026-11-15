@@ -61,7 +61,12 @@
 | ReturnInspection | id, requestId, receivedAt, results, finalized | recordResult, finalize; полное получение, неизменяемый окончательный результат | ReturnRequest, InspectionResult, ReturnPolicy |
 | ReturnProcessing | — (только служебная ссылка StoreState) | open, inspect, reject, withdraw, complete, amendSubmitted, closeExpiredUnreceived, completedQuantities | StoreState, Order, ReturnRequest, ReturnInspection, PaymentBook, Inventory, LoyaltyAccount |
 
-Итого на этом этапе: **50 классов, 245 собственных полей**.
+| ProductReview | id, customerId, productId, orderId, rating, text, moderationStatus, helpfulVoters | edit, publish, hide, voteHelpful; редактирование сбрасывает голоса и модерацию | Customer |
+| ReviewBook | reviews, purchaseReviewIndex, revision | addVerifiedReview, moderate, ratingSummary, verifiedReviewsFor; один отзыв на пару покупатель/продукт | ProductReview, Customer, Order, Product |
+
+Итого на этом этапе: **52 класса, 256 собственных полей**.
+`ProductCatalog::compareProducts` строит матрицу типов/значений характеристик,
+диапазонов установленных цен и свободных количеств. Отсутствующая цена не равна нулю.
 Не все перечисленные методы считаются уникальными предметными поведениями:
 арифметика Money, валидация и прямые операции редактирования не используются
 для искусственного достижения требования о 100 поведениях.
@@ -98,5 +103,6 @@ Commit состоит из statically-checked noexcept swap. Локальные 
 - `OrderStateException` — чужой заказ, неверная фаза либо хронология заказа.
 - `PaymentRuleException` — неверная сумма/документ оплаты или превышение возвратного остатка.
 - `FulfillmentStateException` — неверная фаза комплектации или количество подбора.
+- `ReviewRuleException` — нет подтверждённой сохранившейся покупки, чужой отзыв или недопустимый голос.
 
 Все эти типы покрыты тестами реальных ошибок, а не только тестом конструктора.

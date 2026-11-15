@@ -1,4 +1,5 @@
 #include "shop/application/StoreState.hpp"
+#include "shop/application/ReturnProcessing.hpp"
 #include "shop/common/DuplicateEntityException.hpp"
 #include "shop/common/Lookup.hpp"
 #include "shop/common/Validation.hpp"
@@ -188,5 +189,27 @@ PricingContext StoreState::pricingContext(std::string_view customerId) const {
             loyaltyPolicy_,
             deliveryPolicy_,
             returnPolicy_};
+}
+const ReviewBook& StoreState::reviews() const noexcept {
+    return reviews_;
+}
+std::string StoreState::addReview(std::string_view actor, std::string_view orderId,
+                                  std::string_view productId, int rating, std::string_view text) {
+    auto id = nextId("review");
+    reviews_.addVerifiedReview(id, customer(actor), *orders_.order(orderId),
+                               catalog_.product(productId),
+                               ReturnProcessing(*this).completedQuantities(orderId), rating, text);
+    return id;
+}
+void StoreState::editReview(std::string_view actor, std::string_view reviewId, int rating,
+                            std::string_view text) {
+    customer(actor);
+    reviews_.edit(reviewId, actor, rating, text);
+}
+void StoreState::moderateReview(std::string_view reviewId, bool publish, std::string_view reason) {
+    reviews_.moderate(reviewId, publish, reason);
+}
+void StoreState::voteHelpful(std::string_view actor, std::string_view reviewId) {
+    reviews_.voteHelpful(reviewId, customer(actor));
 }
 } // namespace shop
