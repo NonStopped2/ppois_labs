@@ -3,6 +3,7 @@
 #include "shop/common/DuplicateOperationException.hpp"
 #include "shop/common/Lookup.hpp"
 #include "shop/common/Validation.hpp"
+#include "shop/orders/OrderBook.hpp"
 #include <algorithm>
 
 namespace shop {
@@ -161,6 +162,41 @@ std::vector<std::string> Inventory::auditReservations() const {
     }
     for (const auto& [sku, quantity] : held) {
         issues.push_back("Резерв неизвестного остатка: " + sku);
+    }
+    return issues;
+}
+std::vector<std::string> Inventory::auditReservations(const OrderBook& orders) const {
+    auto issues = auditReservations();
+    for (const auto& [id, entry] : reservations_) {
+        const auto found = orders.orders().find(entry.orderId());
+        if (found == orders.orders().end()) {
+            issues.push_back("Резерв неизвестного заказа: " + id);
+            continue;
+        }
+        const auto& order = *found->second;
+        if (order.reservationId() != id || order.quantities() != entry.quantities() ||
+            entry.warehouseId() != warehouse_.id() ||
+            order.paymentDeadline() != entry.expiresAt()) {
+            issues.push_back("Условия резерва не совпадают с заказом: " + id);
+        }
+        ReservationStatus expected = ReservationStatus::Held;
+        switch (order.status()) {
+        case OrderStatus::AwaitingPayment: break;
+        case OrderStatus::Confirmed:
+        case OrderStatus::InFulfillment: expected = ReservationStatus::Confirmed; break;
+        case OrderStatus::Shipped:
+        case OrderStatus::Delivered: expected = ReservationStatus::Consumed; break;
+        case OrderStatus::Cancelled: expected = ReservationStatus::Released; break;
+        case OrderStatus::Expired: expected = ReservationStatus::Expired; break;
+        }
+        if (entry.status() != expected) {
+            issues.push_back("Состояние резерва не совпадает с заказом: " + id);
+        }
+    }
+    for (const auto& [id, order] : orders.orders()) {
+        if (!reservations_.contains(order->reservationId())) {
+            issues.push_back("У заказа отсутствует резерв: " + id);
+        }
     }
     return issues;
 }

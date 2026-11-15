@@ -52,7 +52,10 @@
 | PaymentBook | attempts, payments, refunds, operationIndex | recordAttempt, refund, reconcileOrderBalance, attemptOutcomeAnalysis; повтор с теми же данными без нового эффекта | Order, PaymentAttempt, Payment, Refund |
 | Fulfillment | id, orderId, warehouseId, requiredQuantities, pickedQuantities, status, trackingNumber, deliveredAt | startPicking, pick, undoPick, pack, reopenPicking, handover, deliver, cancel | Order |
 
-Итого на этом этапе: **43 класса, 220 собственных полей**.
+| Checkout | — (только служебная ссылка StoreState) | preview, placeOrder, expireUnpaidOrders, moveCartItemsToWishlist; атомарное согласование корзины, купона, заказа и резерва | StoreState, PriceQuote, Inventory, OrderBook, CouponBook, Cart, Wishlist |
+| OrderProcessing | — (только служебная ссылка StoreState) | pay, cancel, startPicking, pick, undoPick, pack, reopenPicking, dispatch, confirmDelivery, extendPaymentDeadline, changeUnpaidDelivery, repeatOrder | StoreState, Order, Fulfillment, Inventory, PaymentBook, LoyaltyAccount |
+
+Итого на этом этапе: **45 классов, 220 собственных полей**.
 Не все перечисленные методы считаются уникальными предметными поведениями:
 арифметика Money, валидация и прямые операции редактирования не используются
 для искусственного достижения требования о 100 поведениях.
@@ -60,6 +63,13 @@
 ## Технические типы
 
 `ManualClock` хранит now, продвигается только вперёд и проверяет переполнение.
+`StoreState` владеет реестрами и настройками. `PreparedChange` лениво готовит
+только затронутые корни; без commit подготовленные копии уничтожаются.
+Commit состоит из statically-checked noexcept swap. Локальные методы реестров
+также сохраняют собственную гарантию отката; при этом возможны дополнительные
+внутренние копии индексов. Копирование неизменённых заказов не глубокое:
+`OrderBook` разделяет `shared_ptr<const Order>`, а история изменённого заказа копируется.
+`OperationRecord` хранит точные входные значения и результат команды, не хеш.
 Свободные функции `detail::text`, `require`, `check`, `get` устраняют повторение
 валидации и поиска. Они не подменяют предметные сущности.
 

@@ -10,6 +10,7 @@
 #include <vector>
 
 namespace shop {
+class OrderBook;
 /** Coordinates multi-SKU inventory operations with prepare-then-swap semantics. */
 class Inventory {
   public:
@@ -36,6 +37,7 @@ class Inventory {
     void applyStockCount(std::string_view sku, std::int64_t actual);
     std::map<std::string, std::int64_t> replenishmentNeeds() const;
     std::vector<std::string> auditReservations() const;
+    std::vector<std::string> auditReservations(const OrderBook& orders) const;
     bool operator==(const Inventory&) const = default;
 
   private:
