@@ -41,6 +41,7 @@ class Inventory {
     bool operator==(const Inventory&) const = default;
 
   private:
+    friend class SnapshotCodec;
     void finish(std::string_view id, Timestamp now, ReservationStatus target);
     Warehouse warehouse_;
     std::map<std::string, StockItem> items_;

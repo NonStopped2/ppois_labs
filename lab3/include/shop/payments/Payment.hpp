@@ -21,6 +21,7 @@ class Payment {
     bool operator==(const Payment&) const = default;
 
   private:
+    friend class SnapshotCodec;
     friend class PaymentBook;
     std::string id_;
     std::string attemptId_;

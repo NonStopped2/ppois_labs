@@ -43,6 +43,7 @@ class CouponBook {
     bool operator==(const CouponBook&) const = default;
 
   private:
+    friend class SnapshotCodec;
     std::map<std::string, Coupon> coupons_;
     std::map<std::string, CouponUse> heldUses_;
     std::map<std::string, CouponUse> confirmedUses_;

@@ -74,6 +74,10 @@ jobs:
         run: >-
           python3 lab3/tools/coverage.py --build-dir build/lab3-coverage
           --llvm-cov llvm-cov-18 --llvm-profdata llvm-profdata-18
+      - name: Enforce separate JSON and file-store unit coverage
+        run: >-
+          python3 lab3/tools/coverage.py --build-dir build/lab3-coverage --scope persistence
+          --llvm-cov llvm-cov-18 --llvm-profdata llvm-profdata-18
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

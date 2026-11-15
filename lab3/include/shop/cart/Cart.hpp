@@ -39,6 +39,7 @@ class Cart {
     bool operator==(const Cart&) const = default;
 
   private:
+    friend class SnapshotCodec;
     void replaceLines(std::map<std::string, CartLine> candidate);
     std::string id_;
     std::string customerId_;

@@ -63,6 +63,7 @@ class ProductCatalog {
     bool operator==(const ProductCatalog&) const = default;
 
   private:
+    friend class SnapshotCodec;
     void checkSiblingName(const Category& category,
                           const std::optional<std::string>& parentId) const;
     void replaceProduct(Product candidate);

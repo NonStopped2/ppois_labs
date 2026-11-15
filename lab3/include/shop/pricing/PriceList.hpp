@@ -24,6 +24,7 @@ class PriceList {
     bool operator==(const PriceList&) const = default;
 
   private:
+    friend class SnapshotCodec;
     std::map<std::string, PriceEntry> entries_;
     std::int64_t revision_ = 0;
     Money minimumUnitPrice_;

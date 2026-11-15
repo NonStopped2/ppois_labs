@@ -20,6 +20,7 @@ class LoyaltyAccount {
     bool operator==(const LoyaltyAccount&) const = default;
 
   private:
+    friend class SnapshotCodec;
     using Operation = std::tuple<std::string, Money, bool>;
     bool replay(std::string_view operationId, const Operation& operation) const;
     void record(std::string_view orderId, Money amount, std::string_view operationId,

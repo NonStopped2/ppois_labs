@@ -61,10 +61,30 @@ add_library(shop_core
 )
 target_include_directories(shop_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_compile_features(shop_core PUBLIC cxx_std_20)
+include(FetchContent)
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
+FetchContent_Declare(nlohmann_json
+    URL https://codeload.github.com/nlohmann/json/tar.gz/refs/tags/v3.12.0
+    URL_HASH SHA256=4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187)
+set(JSON_BuildTests OFF CACHE BOOL "Do not build third-party JSON tests" FORCE)
+FetchContent_MakeAvailable(nlohmann_json)
+add_library(shop_persistence
+    persistence/SnapshotValues.cpp persistence/SnapshotEvents.cpp
+    persistence/SnapshotCatalog.cpp persistence/SnapshotCustomers.cpp
+    persistence/SnapshotInventory.cpp persistence/SnapshotOrders.cpp
+    persistence/SnapshotOperations.cpp persistence/SnapshotPayments.cpp
+    persistence/SnapshotReturns.cpp persistence/SnapshotCodec.cpp
+    persistence/SnapshotValidation.cpp persistence/SnapshotDocumentValidation.cpp
+    persistence/SnapshotOperationValidation.cpp persistence/SnapshotStore.cpp)
+target_include_directories(shop_persistence PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/persistence")
+target_link_libraries(shop_persistence PUBLIC shop_core nlohmann_json::nlohmann_json)
 if(MSVC)
     target_compile_options(shop_core PRIVATE /W4)
 else()
     target_compile_options(shop_core PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(shop_persistence PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 option(LAB3_ENABLE_COVERAGE "Instrument the online store with LLVM coverage" OFF)
@@ -113,9 +133,12 @@ if(BUILD_TESTING)
         tests/catalog/ReviewTests.cpp
         tests/reporting/ReportTests.cpp)
     target_link_libraries(shop_core_tests PRIVATE shop_core Catch2::Catch2WithMain)
+    add_executable(shop_persistence_tests tests/persistence/ValueCodecTests.cpp tests/persistence/SnapshotTests.cpp)
+    target_link_libraries(shop_persistence_tests PRIVATE shop_persistence nlohmann_json::nlohmann_json Catch2::Catch2WithMain)
     list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
     include(Catch)
     catch_discover_tests(shop_core_tests TEST_PREFIX "lab3." PROPERTIES LABELS "lab3-unit")
+    catch_discover_tests(shop_persistence_tests TEST_PREFIX "lab3-json." PROPERTIES LABELS "lab3-persistence")
     find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
     add_test(NAME lab3-tools.coverage
         COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/test_coverage.py")

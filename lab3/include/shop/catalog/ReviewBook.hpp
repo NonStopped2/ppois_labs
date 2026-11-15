@@ -38,6 +38,7 @@ class ReviewBook {
     bool operator==(const ReviewBook&) const = default;
 
   private:
+    friend class SnapshotCodec;
     void replace(ProductReview candidate);
     std::map<std::string, ProductReview> reviews_;
     std::map<std::pair<std::string, std::string>, std::string> purchaseReviewIndex_;

@@ -10,6 +10,13 @@ SPEC.loader.exec_module(COVERAGE)
 
 
 class CoverageTests(unittest.TestCase):
+    def test_persistence_scope_is_independent_of_core_coverage(self):
+        data=self.report(10)
+        data["data"][0]["files"].append({"filename":str(COVERAGE.LAB / "persistence/SnapshotStore.cpp"),
+            "summary":{"lines":{"count":10,"covered":9}}})
+        with patch("builtins.print"):
+            self.assertTrue(COVERAGE.summarize(data,[],scope="core"))
+            self.assertFalse(COVERAGE.summarize(data,[],scope="persistence"))
     def report(self, covered, count=10):
         return {"data": [{"files": [
             {"filename": str(COVERAGE.LAB / "src/common/Money.cpp"),

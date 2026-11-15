@@ -28,6 +28,7 @@ class StockReservation {
     bool operator==(const StockReservation&) const = default;
 
   private:
+    friend class SnapshotCodec;
     void checkTime(Timestamp now) const;
     std::string id_;
     std::string orderId_;

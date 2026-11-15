@@ -65,6 +65,7 @@ class PaymentBook {
     bool operator==(const PaymentBook&) const = default;
 
   private:
+    friend class SnapshotCodec;
     void swap(PaymentBook& other) noexcept;
     std::map<std::string, PaymentAttempt> attempts_;
     std::map<std::string, Payment> payments_;

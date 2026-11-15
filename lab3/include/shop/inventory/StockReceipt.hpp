@@ -22,6 +22,7 @@ class StockReceipt {
     bool operator==(const StockReceipt&) const = default;
 
   private:
+    friend class SnapshotCodec;
     friend class Inventory;
     std::string id_;
     std::string supplierReference_;

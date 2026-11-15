@@ -24,6 +24,7 @@ class Wishlist {
     bool operator==(const Wishlist&) const = default;
 
   private:
+    friend class SnapshotCodec;
     std::string customerId_;
     std::set<std::string> productIds_;
 };

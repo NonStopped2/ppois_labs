@@ -24,6 +24,7 @@ class OrderBook {
     bool operator==(const OrderBook& other) const;
 
   private:
+    friend class SnapshotCodec;
     std::map<std::string, std::shared_ptr<const Order>> orders_;
     std::map<std::string, std::set<std::string>> customerOrderIndex_;
     std::int64_t revision_ = 0;
