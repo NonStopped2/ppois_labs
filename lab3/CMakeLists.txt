@@ -11,6 +11,15 @@ add_library(shop_core
     src/customers/Customer.cpp
     src/customers/AddressBook.cpp
     src/customers/Wishlist.cpp
+    src/customers/LoyaltyAccount.cpp
+    src/customers/LoyaltyPolicy.cpp
+    src/pricing/PriceEntry.cpp
+    src/pricing/PriceList.cpp
+    src/pricing/DiscountAllocation.cpp
+    src/pricing/QuoteLine.cpp
+    src/pricing/Promotion.cpp
+    src/pricing/Coupon.cpp
+    src/pricing/CouponBook.cpp
 )
 target_include_directories(shop_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_compile_features(shop_core PUBLIC cxx_std_20)
@@ -49,7 +58,9 @@ if(BUILD_TESTING)
     add_executable(shop_core_tests
         tests/common/ValueTests.cpp
         tests/catalog/CatalogTests.cpp
-        tests/customers/CustomerTests.cpp)
+        tests/customers/CustomerTests.cpp
+        tests/pricing/PricingTests.cpp
+        tests/pricing/PromotionTests.cpp)
     target_link_libraries(shop_core_tests PRIVATE shop_core Catch2::Catch2WithMain)
     list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
     include(Catch)

@@ -18,8 +18,17 @@
 | Customer | id, contacts, status, registeredAt, restrictionReason | restrictPurchases, restorePurchases, assertMayCheckout | ContactDetails |
 | AddressBook | customerId, addresses, defaultAddressId | add, replace, remove, chooseDefault; корректный default после удаления | Address |
 | Wishlist | customerId, productIds | addProduct, removeProduct, removeArchived, createCartSelection | Product, ProductCatalog |
+| LoyaltyAccount | customerId, netDeliveredPurchases, processedOperations, qualifyingSpend | recordDelivery, recordReturn; полный откат и идемпотентность | Money |
+| LoyaltyPolicy | tierThresholds, tierDiscountBps, maximumDiscountBps | determineTier, calculateDiscount, nextTierProgress | Money, LoyaltyAccount |
+| PriceEntry | sku, unitPrice, changedAt, revision | Неизменяемая запись текущей цены | Money |
+| PriceList | entries, revision, minimumUnitPrice | changePrice, applyCategoryPriceChange, removePriceForArchivedVariant | PriceEntry, ProductCatalog, Money |
+| DiscountAllocation | sku, quantity, grossTotal, discountTotal | netForUnitRange; точная стоимость любой части единиц | Money |
+| QuoteLine | sku, title, quantity, unitPrice, allocation, netTotal, packageSnapshot, returnEligible | Неизменяемая строка предложения; цена, характеристики, упаковка и возвратность | ProductVariant, Money, DiscountAllocation |
+| Promotion | id, name, kind, value, minimumSubtotal, window, categoryIds, automatic, enabled | eligibleLines, calculateDiscount, assertApplicable | TimeWindow, Money, QuoteLine, ProductCatalog |
+| Coupon | code, promotionId, totalUseLimit, perCustomerLimit, window, enabled | normalizeCode, assertRedeemable | TimeWindow, Customer |
+| CouponBook | coupons, heldUses, confirmedUses | registerCode, reserveUse, confirmUse, releaseUse, disableCode, usageSummary | Coupon, Promotion, Customer |
 
-Итого на этом этапе: **12 классов, 47 собственных полей**.
+Итого на этом этапе: **21 класс, 91 собственное поле**.
 Не все перечисленные методы считаются уникальными предметными поведениями:
 арифметика Money, валидация и прямые операции редактирования не используются
 для искусственного достижения требования о 100 поведениях.
@@ -38,5 +47,7 @@
 - `DuplicateEntityException` — повтор ID, SKU, характеристики или метки адреса.
 - `CatalogRuleException` — недопустимый переход или нарушение дерева/схемы.
 - `CustomerRestrictedException` — ограниченные покупки и неверный переход ограничения.
+- `DuplicateOperationException` — повтор операции с иными данными.
+- `PromotionRuleException` — неприменимая акция, недоступный/исчерпанный купон.
 
 Все эти типы покрыты тестами реальных ошибок, а не только тестом конструктора.
