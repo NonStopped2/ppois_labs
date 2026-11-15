@@ -3,6 +3,14 @@ add_library(shop_core
     src/common/Address.cpp
     src/common/ContactDetails.cpp
     src/common/TimeWindow.cpp
+    src/catalog/Category.cpp
+    src/catalog/ProductAttribute.cpp
+    src/catalog/ProductVariant.cpp
+    src/catalog/Product.cpp
+    src/catalog/ProductCatalog.cpp
+    src/customers/Customer.cpp
+    src/customers/AddressBook.cpp
+    src/customers/Wishlist.cpp
 )
 target_include_directories(shop_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_compile_features(shop_core PUBLIC cxx_std_20)
@@ -38,7 +46,10 @@ if(BUILD_TESTING)
         URL https://codeload.github.com/catchorg/Catch2/tar.gz/refs/tags/v3.8.1
         URL_HASH SHA256=18b3f70ac80fccc340d8c6ff0f339b2ae64944782f8d2fca2bd705cf47cadb79)
     FetchContent_MakeAvailable(Catch2)
-    add_executable(shop_core_tests tests/common/ValueTests.cpp)
+    add_executable(shop_core_tests
+        tests/common/ValueTests.cpp
+        tests/catalog/CatalogTests.cpp
+        tests/customers/CustomerTests.cpp)
     target_link_libraries(shop_core_tests PRIVATE shop_core Catch2::Catch2WithMain)
     list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
     include(Catch)
