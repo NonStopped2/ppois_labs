@@ -1,19 +1,16 @@
 # PPOIS labs — C++20
 
 Один репозиторий для лабораторных работ по ППОИС.
-В этой ветке разрабатывается **лабораторная №2 — «Почта»**.
 
 | Каталог | Содержание |
 | --- | --- |
-| [lab1](lab1/) | Кубик Рубика и машина Поста; версия первой работы — в ветке [`feature/lab1`](https://github.com/NonStopped2/ppois_labs/tree/feature/lab1) |
+| [lab1](lab1/README.md) | Кубик Рубика и машина Поста |
 | [lab2](lab2/README.md) | Почта: оформление, оплата, хранение, сортировка, перевозка, выдача и курьерская доставка отправлений |
-| [lab3](lab3/README.md) | Следующая работа, ещё не реализована |
+| [lab3](lab3/README.md) | Интернет-магазин, ещё не реализован |
 | [lab4](lab4/README.md) | Следующая работа, ещё не реализована |
 
-Ветки содержат версии всего репозитория, а не только отдельной лабораторной.
-Наличие каталога не означает, что соответствующая работа уже реализована
-или одобрена преподавателем. Полная версия первой работы не переносится
-в эту ветку автоматически.
+В этой версии объединены реализации lab1 и lab2. Наличие реализации, успешного
+CI или релиза не означает прохождения защиты и принятия работы преподавателем.
 
 ## Быстрый старт
 
@@ -25,8 +22,10 @@ Catch2 v3.8.1 загружается CMake автоматически с про�
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build --target post_cli post_core_tests post_ui_tests --parallel 4
-ctest --test-dir build -L '^lab2($|-)' --output-on-failure
+cmake --build build --parallel 4
+ctest --test-dir build --output-on-failure
+./build/lab1/rubiks_cube
+./build/lab1/post_machine lab1/examples/post_increment.txt -log
 ./build/lab2/post_cli --demo
 ```
 
@@ -47,6 +46,7 @@ cmake --build build/lab2-release --target post_cli --parallel 4
 
 ## Документация, покрытие, качество
 
+- **[lab1/README.md](lab1/README.md)** — команды, форматы и ограничения кубика и машины Поста.
 - **[lab2/README.md](lab2/README.md)** — предметная модель, классы, поля,
   поведения, связи, исключения, ограничения и результаты проверок.
 - **[lab2/CLI.md](lab2/CLI.md)** — меню, команды и демонстрационные сценарии.
@@ -56,6 +56,8 @@ cmake --build build/lab2-release --target post_cli --parallel 4
 Основные команды:
 
 ```bash
+python3 tools/quality.py
+cmake --build build --target docs
 python3 lab2/tools/quality.py
 cmake --build build --target lab2_docs
 python3 lab2/tools/package.py --build-dir build/lab2-release --output-dir build/lab2-packages
@@ -79,10 +81,31 @@ python3 lab2/tools/coverage.py --build-dir build/lab2-coverage --with-ui
 **более 90% строк**; внешние CLI-сценарии не увеличивают эти показатели.
 Эти проверки относятся к lab2, а не ко всем лабораторным репозитория.
 
+Для покрытия lab1 создайте отдельную сборку с `-DENABLE_COVERAGE=ON`,
+соберите её и запустите `python3 tools/coverage.py --build-dir <каталог-сборки>`.
+Упаковка lab1: `python3 tools/package.py --build-dir <каталог-сборки> --output-dir build/lab1-packages`.
+Каждый упаковщик устанавливает только компонент своей лабораторной.
+
+На macOS необходимые инструменты можно установить так:
+
+```bash
+brew install cmake doxygen cppcheck
+python3 -m venv build/tools
+build/tools/bin/pip install clang-format==18.1.8
+```
+
+LLVM coverage-инструменты предоставляет Xcode Command Line Tools.
+
 ## Процесс разработки
 
-Работа ведётся в `feature/lab2`. Слияние в `main` — через Pull Request
-после одобрения преподавателем.
+Работа ведётся в отдельных feature-ветках, слияние в `main` — через Pull Request.
+Для lab1 и lab2 преподаватель разрешил слияние до review; это отдельное
+разрешение на Git-процесс, а не подтверждение сдачи этих работ.
+
+Workflow [`.github/workflows/lab1.yml`](.github/workflows/lab1.yml) проверяет
+lab1 на Linux/macOS, покрытие, качество и Doxygen. После затрагивающего lab1
+слияния в `main` и успешных проверок публикуется Release с тегом
+`lab1-main-<SHA проверенного коммита>`. Ручные теги `lab1-vX.Y.Z` также поддерживаются.
 
 Workflow [`.github/workflows/lab2.yml`](.github/workflows/lab2.yml)
 проверяет сборку и тесты на Linux/macOS, покрытие, качество и документацию.
@@ -97,3 +120,7 @@ Workflow [`.github/workflows/lab2.yml`](.github/workflows/lab2.yml)
 Релиз относится к коммиту своего тега: последующие изменения ветки
 не обновляют опубликованные архивы автоматически. Актуальные сведения
 о версиях и проверенных пакетах приведены в [документации lab2](lab2/README.md).
+
+Изменения только одной лабораторной не должны перевыпускать другую. Для общих
+сборочных и релизных файлов проверяется полный диапазон push. Feature-ветки и PR
+выполняют только проверки, старые теги не переставляются.
