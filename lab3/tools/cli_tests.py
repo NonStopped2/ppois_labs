@@ -9,6 +9,12 @@ import unittest
 
 BINARY = None
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
+DELIVERED_PURCHASE = (
+    "as customer alice\ncart add SHIRT-BLUE 3\norder preview standard home\n"
+    "order place place\norder pay order-1 3738 card yes pay\nas operator\n"
+    "fulfill start order-1 start\nfulfill pick order-1 SHIRT-BLUE 3 pick\n"
+    "fulfill pack order-1 pack\nfulfill ship order-1 TRACK ship\nas customer alice\n"
+    "order deliver order-1 deliver\n")
 
 
 class StoreCliTests(unittest.TestCase):
@@ -90,6 +96,70 @@ class StoreCliTests(unittest.TestCase):
                                   "as operator\n" + f"load {json.dumps(str(broken))} replace\n"
                                   "as customer alice\ncart show\n", expected=1)
             self.assertIn("SHIRT-BLUE x 1", output)
+
+    def test_restored_expiry_skips_caller_keys_and_repeated_cleanup_is_harmless(self):
+        with tempfile.TemporaryDirectory(prefix="shop-cli-expiry-") as directory:
+            file = Path(directory) / "shop.json"
+            path = json.dumps(str(file))
+            base = "system-expire-order-1"
+            self.run_cli("as customer alice\ncart add SHIRT-BLUE 3\norder preview standard home\n"
+                         f"order place {base}\norder extend order-1 {base}-1\nas operator\nsave {path}\n")
+            before = json.loads(file.read_text(encoding="utf-8"))
+            output = self.run_cli(f"clock advance 4000\nclock cleanup\norder show order-1\nsave {path}\n",
+                                  ["--load", str(file), "--script", "-"])
+            self.assertIn("Expired", output)
+            after = json.loads(file.read_text(encoding="utf-8"))
+            self.assertTrue(all(item["reserved"] == 0 for item in after["inventory"]["items"]))
+            old = {entry["id"]: entry for entry in before["operations"]}
+            new = {entry["id"]: entry for entry in after["operations"]}
+            for key, record in old.items():
+                self.assertEqual(new[key], record)
+            self.assertIn(base + "-2", new)
+            self.run_cli(f"clock cleanup\nsave {path}\n", ["--load", str(file), "--script", "-"])
+            self.assertEqual(json.loads(file.read_text(encoding="utf-8")), after)
+
+    def test_restored_return_expiry_cannot_be_blocked_by_caller_operation_keys(self):
+        with tempfile.TemporaryDirectory(prefix="shop-cli-return-expiry-") as directory:
+            file = Path(directory) / "shop.json"
+            path = json.dumps(str(file))
+            base = "system-expire-return-return-6"
+            self.run_cli(DELIVERED_PURCHASE +
+                         f"return open order-1 {base} SHIRT-BLUE 1 changed-mind\n"
+                         f"return amend return-6 {base}-1 SHIRT-BLUE 1 changed-mind\n"
+                         f"as operator\nsave {path}\n")
+            before = json.loads(file.read_text(encoding="utf-8"))
+            request = before["returns"]["requests"][0]
+            advance = request["deadline"] - before["clock"]
+            self.run_cli(f"clock advance {advance}\nclock cleanup\nsave {path}\n",
+                         ["--load", str(file), "--script", "-"])
+            after = json.loads(file.read_text(encoding="utf-8"))
+            self.assertEqual(after["returns"]["requests"][0]["decision_reason"], "NotReceivedInTime")
+            self.assertEqual(after["inventory"], before["inventory"])
+            self.assertEqual(after["payments"], before["payments"])
+            self.assertIn(base + "-2", {entry["id"] for entry in after["operations"]})
+            self.run_cli(f"clock cleanup\nsave {path}\n", ["--load", str(file), "--script", "-"])
+            self.assertEqual(json.loads(file.read_text(encoding="utf-8")), after)
+
+    def test_failed_payment_and_partial_inspection_preserve_complete_saved_state(self):
+        with tempfile.TemporaryDirectory(prefix="shop-cli-rollback-") as directory:
+            file = Path(directory) / "shop.json"
+            path = json.dumps(str(file))
+            self.run_cli("as customer alice\ncart add SHIRT-BLUE 3\norder preview standard home\n"
+                         f"order place place\nas operator\nsave {path}\n")
+            before = json.loads(file.read_text(encoding="utf-8"))
+            self.run_cli("as customer alice\norder pay order-1 1 card yes pay\n"
+                         f"as operator\nsave {path}\n",
+                         ["--load", str(file), "--script", "-"], expected=1)
+            self.assertEqual(json.loads(file.read_text(encoding="utf-8")), before)
+            self.run_cli(DELIVERED_PURCHASE +
+                         f"return open order-1 open SHIRT-BLUE 2 changed-mind\nas operator\nsave {path}\n")
+            before = json.loads(file.read_text(encoding="utf-8"))
+            self.run_cli(f"return inspect return-6 inspect SHIRT-BLUE 1 1 1 opened\nsave {path}\n",
+                         ["--load", str(file), "--script", "-"], expected=1)
+            self.assertEqual(json.loads(file.read_text(encoding="utf-8")), before)
+            output = self.run_cli("return inspect return-6 inspect SHIRT-BLUE 2 2 2 opened\n",
+                                  ["--load", str(file), "--script", "-"])
+            self.assertIn("inspection-7", output)
 
 
 def main():

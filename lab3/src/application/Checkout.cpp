@@ -40,11 +40,11 @@ std::string Checkout::placeOrder(std::string_view actor, const PriceQuote& accep
         preview(actor, acceptedQuote.deliveryAddress(), acceptedQuote.deliveryOptionId());
     detail::check<QuoteChangedException>(acceptedQuote.sameCommercialTerms(recalculated),
                                          "Условия покупки изменились; подтвердите новый расчёт");
-    auto id = state_.nextId("order");
-    const auto reservationId = state_.nextId("reservation");
+    PreparedChange change(state_);
+    auto id = change.nextId("order");
+    const auto reservationId = change.nextId("reservation");
     const auto deadline = detail::addNonnegative(now, state_.paymentLifetime_);
     const Order order(id, recalculated, reservationId, now, deadline, operationId);
-    PreparedChange change(state_);
     change.inventory().reserve(reservationId, id, order.quantities(), now, deadline);
     if (order.discountSource().couponCode) {
         change.coupons().reserveUse(*order.discountSource().couponCode, state_.customer(actor),
@@ -62,7 +62,7 @@ std::vector<std::string> Checkout::expireUnpaidOrders() {
     auto overdue = state_.orders_.findOverdueUnpaid(now);
     for (const auto& id : overdue) {
         auto order = *state_.orders_.order(id);
-        const auto operation = "system-expire-" + id;
+        const auto operation = unusedOperationId(state_.operations_, "system-expire-" + id);
         const CommandSignature signature{
             CommandKind::ExpireOrder, "system", id, {}, {}, std::nullopt, std::nullopt};
         PreparedChange change(state_);

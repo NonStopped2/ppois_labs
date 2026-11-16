@@ -1,9 +1,11 @@
 #include "../StoreFixtures.hpp"
 #include "shop/application/ReturnProcessing.hpp"
 #include "shop/common/DuplicateOperationException.hpp"
+#include "shop/common/InvalidDomainDataException.hpp"
 #include "shop/common/OrderStateException.hpp"
 #include "shop/common/ReturnRuleException.hpp"
 #include <catch2/catch_test_macros.hpp>
+#include <limits>
 
 using namespace shop;
 namespace {
@@ -105,11 +107,14 @@ TEST_CASE(
     REQUIRE(state.inspections() == before.inspections());
     REQUIRE(state.payments() == before.payments());
     REQUIRE(state.inventory() == before.inventory());
+    REQUIRE(state == before);
     state.advanceClock(100);
+    const auto late = state;
     REQUIRE_THROWS_AS(
         returns.inspect(id, {InspectionResult("shirt-blue", 2, 2, 0, ItemCondition::Defective)},
                         "late"),
         ReturnRuleException);
+    REQUIRE(state == late);
     REQUIRE(returns.closeExpiredUnreceived() == std::vector<std::string>{id});
     REQUIRE(state.returnRequests().at(id).decisionReason() == "NotReceivedInTime");
     REQUIRE(returns.closeExpiredUnreceived().empty());
@@ -118,6 +123,47 @@ TEST_CASE(
         ReturnRuleException);
     REQUIRE(state.payments().refunds().empty());
     REQUIRE(state.inventory() == before.inventory());
+}
+
+TEST_CASE("Return expiry skips occupied user operation IDs and repeated cleanup has no effect") {
+    auto state = test::store();
+    const auto orderId = deliver(state);
+    ReturnProcessing returns(state);
+    const std::string base = "system-expire-return-return-6";
+    const std::vector<ReturnSelection> selection{{"shirt-blue", 1, ReturnReason::ChangedMind}};
+    const auto id = returns.open("alice", orderId, selection, base);
+    REQUIRE(id == "return-6");
+    returns.amendSubmitted("alice", id, selection, base + "-1");
+    const auto userOperations = state.operations();
+    state.advanceClock(100);
+    REQUIRE(returns.closeExpiredUnreceived() == std::vector<std::string>{id});
+    REQUIRE(state.returnRequests().at(id).status() == ReturnStatus::Rejected);
+    REQUIRE(state.returnRequests().at(id).decisionReason() == "NotReceivedInTime");
+    REQUIRE(state.operations().at(base + "-2").signature.kind == CommandKind::ExpireReturn);
+    for (const auto& [key, record] : userOperations) {
+        REQUIRE(state.operations().at(key) == record);
+    }
+    const auto expired = state;
+    REQUIRE(returns.closeExpiredUnreceived().empty());
+    REQUIRE(returns.open("alice", orderId, selection, base) == id);
+    REQUIRE(state == expired);
+}
+
+TEST_CASE("Late restock failure rolls back refund documents and identifier allocation together") {
+    auto state = test::store();
+    const auto orderId = deliver(state);
+    ReturnProcessing returns(state);
+    const auto requestId =
+        returns.open("alice", orderId, {{"shirt-blue", 1, ReturnReason::ChangedMind}}, "open");
+    returns.inspect(requestId, {InspectionResult("shirt-blue", 1, 1, 1, ItemCondition::Opened)},
+                    "inspect");
+    state.applyStockCount("shirt-blue", std::numeric_limits<std::int64_t>::max());
+    const auto before = state;
+    REQUIRE_THROWS_AS(returns.complete(requestId, "complete"), InvalidDomainDataException);
+    REQUIRE(state == before);
+    state.applyStockCount("shirt-blue", 17);
+    REQUIRE(returns.complete(requestId, "complete") == Money(34));
+    REQUIRE(state.returnRequests().at(requestId).refundId() == "refund-8");
 }
 
 TEST_CASE("Zero-money accepted returns still record completed quantity and a historical event") {

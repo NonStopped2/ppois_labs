@@ -1,4 +1,5 @@
 #include "shop/application/StoreState.hpp"
+#include "shop/application/PreparedChange.hpp"
 #include "shop/application/ReturnProcessing.hpp"
 #include "shop/common/DuplicateEntityException.hpp"
 #include "shop/common/Lookup.hpp"
@@ -23,9 +24,12 @@ void StoreState::advanceClock(std::int64_t seconds) {
     clock_.advance(seconds);
 }
 std::string StoreState::nextId(std::string_view prefix) {
-    const auto next = detail::addNonnegative(nextSequence_, 1);
-    auto result = detail::text(prefix, "префикс ID") + "-" + std::to_string(nextSequence_);
-    nextSequence_ = next;
+    return allocateId(nextSequence_, prefix);
+}
+std::string StoreState::allocateId(std::int64_t& sequence, std::string_view prefix) {
+    const auto next = detail::addNonnegative(sequence, 1);
+    auto result = detail::text(prefix, "префикс ID") + "-" + std::to_string(sequence);
+    sequence = next;
     return result;
 }
 void StoreState::addCustomer(const Customer& entry) {
@@ -201,10 +205,12 @@ const ReviewBook& StoreState::reviews() const noexcept {
 }
 std::string StoreState::addReview(std::string_view actor, std::string_view orderId,
                                   std::string_view productId, int rating, std::string_view text) {
-    auto id = nextId("review");
-    reviews_.addVerifiedReview(id, customer(actor), *orders_.order(orderId),
-                               catalog_.product(productId),
-                               ReturnProcessing(*this).completedQuantities(orderId), rating, text);
+    PreparedChange change(*this);
+    auto id = change.nextId("review");
+    change.reviews().addVerifiedReview(
+        id, customer(actor), *orders_.order(orderId), catalog_.product(productId),
+        ReturnProcessing(*this).completedQuantities(orderId), rating, text);
+    change.commit();
     return id;
 }
 void StoreState::editReview(std::string_view actor, std::string_view reviewId, int rating,

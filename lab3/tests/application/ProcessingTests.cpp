@@ -4,6 +4,7 @@
 #include "shop/common/DuplicateEntityException.hpp"
 #include "shop/common/DuplicateOperationException.hpp"
 #include "shop/common/FulfillmentStateException.hpp"
+#include "shop/common/InvalidDomainDataException.hpp"
 #include "shop/common/OrderStateException.hpp"
 #include "shop/common/PaymentRuleException.hpp"
 #include "shop/common/QuoteChangedException.hpp"
@@ -36,6 +37,7 @@ TEST_CASE(
         PaymentRuleException);
     REQUIRE(state.payments() == declined.payments());
     REQUIRE(state.orders() == declined.orders());
+    REQUIRE(state == declined);
     state.advanceClock(
         11); // Coupon and promotion expired after checkout; held purchase terms still apply.
     result =
@@ -65,6 +67,34 @@ TEST_CASE(
     REQUIRE(state == cancelled);
 }
 
+TEST_CASE(
+    "Rejected payment parameters preserve the counter and allow retry with the same operation ID") {
+    auto state = test::store();
+    const auto id = test::place(state);
+    OrderProcessing process(state);
+    const auto before = state;
+    REQUIRE_THROWS_AS(
+        process.pay("alice", id, Money(1), PaymentMethod::SimulatedCard, true, "", "retry"),
+        PaymentRuleException);
+    REQUIRE(state == before);
+    REQUIRE_THROWS_AS(
+        process.pay("alice", id, Money(1), PaymentMethod::SimulatedCard, false, "Отказ", "retry"),
+        PaymentRuleException);
+    REQUIRE(state == before);
+    REQUIRE_THROWS_AS(
+        process.pay("alice", id, Money(110), static_cast<PaymentMethod>(99), true, "", "retry"),
+        InvalidDomainDataException);
+    REQUIRE(state == before);
+    const auto result =
+        process.pay("alice", id, Money(110), PaymentMethod::SimulatedCard, true, "", "retry");
+    REQUIRE(result.attemptId == "attempt-3");
+    REQUIRE(result.paymentId == "payment-4");
+    const auto paid = state;
+    REQUIRE(process.pay("alice", id, Money(110), PaymentMethod::SimulatedCard, true, "", "retry") ==
+            result);
+    REQUIRE(state == paid);
+}
+
 TEST_CASE("Unpaid cancellation releases coupon and payment deadline extension stays synchronized") {
     auto state = test::store(true);
     const auto id = test::place(state);
@@ -91,6 +121,9 @@ TEST_CASE("Shipping consumes stock exactly once and receipt credits only deliver
     test::pay(state, id);
     OrderProcessing process(state);
     process.startPicking(id, "start");
+    const auto started = state;
+    REQUIRE_THROWS_AS(process.startPicking(id, "another-start"), FulfillmentStateException);
+    REQUIRE(state == started);
     process.pick(id, "shirt-blue", 2, "pick1");
     const auto partial = state;
     REQUIRE_THROWS_AS(process.pack(id, "pack"), FulfillmentStateException);

@@ -38,9 +38,13 @@ class PreparedChange {
           payments_(state.payments_), carts_(state.carts_), wishlists_(state.wishlists_),
           loyalty_(state.loyaltyAccounts_), fulfillments_(state.fulfillments_),
           operations_(state.operations_), returns_(state.returnRequests_),
-          inspections_(state.inspections_) {}
+          inspections_(state.inspections_), reviews_(state.reviews_),
+          nextSequence_(state.nextSequence_) {}
     PreparedChange(const PreparedChange&) = delete;
     PreparedChange& operator=(const PreparedChange&) = delete;
+    std::string nextId(std::string_view prefix) {
+        return StoreState::allocateId(nextSequence_.write(), prefix);
+    }
     OrderBook& orders() {
         return orders_.write();
     }
@@ -74,6 +78,9 @@ class PreparedChange {
     std::map<std::string, ReturnInspection>& inspections() {
         return inspections_.write();
     }
+    ReviewBook& reviews() {
+        return reviews_.write();
+    }
     void commit() noexcept {
         if (committed_) {
             return;
@@ -89,6 +96,8 @@ class PreparedChange {
         operations_.commit();
         returns_.commit();
         inspections_.commit();
+        reviews_.commit();
+        nextSequence_.commit();
         committed_ = true;
     }
 
@@ -104,6 +113,9 @@ class PreparedChange {
     detail::StagedValue<OperationJournal> operations_;
     detail::StagedValue<std::map<std::string, ReturnRequest>> returns_;
     detail::StagedValue<std::map<std::string, ReturnInspection>> inspections_;
+    detail::StagedValue<ReviewBook> reviews_;
+    // Allocated IDs become observable only together with the documents that use them.
+    detail::StagedValue<std::int64_t> nextSequence_;
     bool committed_ = false;
 };
 } // namespace shop

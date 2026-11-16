@@ -110,6 +110,30 @@ TEST_CASE("Store reviews remain visible after returns but a fully returned produ
     REQUIRE(state.reviews().review(review).moderationStatus().reason == "Проверяется");
 }
 
+TEST_CASE("Rejected review creation preserves the entire store including its next identifier") {
+    auto state = test::store();
+    const auto orderId = test::place(state);
+    const auto unpaid = state;
+    REQUIRE_THROWS_AS(state.addReview("alice", orderId, "shirt", 5, "Слишком рано"),
+                      ReviewRuleException);
+    REQUIRE(state == unpaid);
+    test::pay(state, orderId);
+    test::ship(state, orderId);
+    OrderProcessing(state).confirmDelivery("alice", orderId, "deliver");
+    const auto delivered = state;
+    REQUIRE_THROWS_AS(state.addReview("unknown", orderId, "shirt", 5, "Нет покупателя"),
+                      EntityNotFoundException);
+    REQUIRE(state == delivered);
+    REQUIRE_THROWS_AS(state.addReview("alice", orderId, "shirt", 0, "Неверная оценка"),
+                      ReviewRuleException);
+    REQUIRE(state == delivered);
+    REQUIRE(state.addReview("alice", orderId, "shirt", 5, "Отзыв") == "review-6");
+    const auto reviewed = state;
+    REQUIRE_THROWS_AS(state.addReview("alice", orderId, "shirt", 4, "Повтор"),
+                      DuplicateEntityException);
+    REQUIRE(state == reviewed);
+}
+
 TEST_CASE("Product comparison distinguishes missing incompatible and unpriced characteristics") {
     auto catalog = test::catalog();
     auto product = test::product("other", "other-blue");

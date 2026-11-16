@@ -3,9 +3,13 @@
 #include "SnapshotJson.hpp"
 #include "SnapshotStore.hpp"
 #include "shop/application/ReturnProcessing.hpp"
+#include "shop/common/InvalidDomainDataException.hpp"
+#include "shop/common/PaymentRuleException.hpp"
+#include "shop/common/ReturnRuleException.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <unistd.h>
 
 using namespace shop;
@@ -325,4 +329,96 @@ TEST_CASE("JSON cannot inject orphan money returns or swap shipment-history refe
                                                 {"result_id", "refund-100"}}}});
     data["next_sequence"] = 101;
     REQUIRE_THROWS_AS(SnapshotCodec::decode(data.dump()), SnapshotException);
+}
+
+TEST_CASE(
+    "Version one snapshots retain colliding user keys while restored orders and returns expire") {
+    auto state = test::store();
+    const auto quote = Checkout(state).preview("alice", test::address(), "standard");
+    const auto orderId = Checkout(state).placeOrder("alice", quote, "system-expire-order-1");
+    const auto held = SnapshotCodec::encode(state);
+    REQUIRE(Json::parse(held).at("version") == 1);
+    auto restored = SnapshotCodec::decode(held);
+    restored.advanceClock(30);
+    REQUIRE(Checkout(restored).expireUnpaidOrders() == std::vector<std::string>{orderId});
+    REQUIRE(restored.operations().at("system-expire-order-1").signature.kind ==
+            CommandKind::PlaceOrder);
+    verify(restored);
+    auto expired = SnapshotCodec::decode(SnapshotCodec::encode(restored));
+    const auto before = expired;
+    REQUIRE(Checkout(expired).expireUnpaidOrders().empty());
+    REQUIRE(Checkout(expired).placeOrder("alice", quote, "system-expire-order-1") == orderId);
+    REQUIRE(expired == before);
+
+    test::pay(state, orderId);
+    test::ship(state, orderId);
+    OrderProcessing(state).confirmDelivery("alice", orderId, "deliver");
+    ReturnProcessing returns(state);
+    const std::vector<ReturnSelection> selection{{"shirt-blue", 1, ReturnReason::ChangedMind}};
+    const std::string operation = "system-expire-return-return-6";
+    const auto requestId = returns.open("alice", orderId, selection, operation);
+    restored = SnapshotCodec::decode(SnapshotCodec::encode(state));
+    restored.advanceClock(100);
+    REQUIRE(ReturnProcessing(restored).closeExpiredUnreceived() ==
+            std::vector<std::string>{requestId});
+    REQUIRE(restored.operations().at(operation).signature.kind == CommandKind::OpenReturn);
+    verify(restored);
+    expired = SnapshotCodec::decode(SnapshotCodec::encode(restored));
+    const auto closed = expired;
+    REQUIRE(ReturnProcessing(expired).closeExpiredUnreceived().empty());
+    REQUIRE(ReturnProcessing(expired).open("alice", orderId, selection, operation) == requestId);
+    REQUIRE(expired == closed);
+}
+
+TEST_CASE(
+    "Failed payment and inspection preserve every serialized field and permit valid retries") {
+    auto state = test::store();
+    const auto orderId = test::place(state);
+    const auto beforePayment = SnapshotCodec::encode(state);
+    REQUIRE_THROWS_AS(OrderProcessing(state).pay("alice", orderId, Money(1),
+                                                 PaymentMethod::SimulatedCard, true, "", "pay"),
+                      PaymentRuleException);
+    REQUIRE(SnapshotCodec::encode(state) == beforePayment);
+    state = SnapshotCodec::decode(beforePayment);
+    test::pay(state, orderId);
+    test::ship(state, orderId);
+    OrderProcessing(state).confirmDelivery("alice", orderId, "deliver");
+    const auto requestId = ReturnProcessing(state).open(
+        "alice", orderId, {{"shirt-blue", 2, ReturnReason::ChangedMind}}, "open");
+    const auto beforeInspection = SnapshotCodec::encode(state);
+    REQUIRE_THROWS_AS(
+        ReturnProcessing(state).inspect(
+            requestId, {InspectionResult("shirt-blue", 1, 1, 1, ItemCondition::Opened)}, "inspect"),
+        ReturnRuleException);
+    REQUIRE(SnapshotCodec::encode(state) == beforeInspection);
+    state = SnapshotCodec::decode(beforeInspection);
+    REQUIRE(ReturnProcessing(state).inspect(
+                requestId, {InspectionResult("shirt-blue", 2, 2, 2, ItemCondition::Opened)},
+                "inspect") == "inspection-7");
+    verify(state);
+}
+
+TEST_CASE("Identifier overflow discards a partially allocated checkout or payment sequence") {
+    auto state = test::store();
+    auto data = Json::parse(SnapshotCodec::encode(state));
+    data["next_sequence"] = std::numeric_limits<std::int64_t>::max() - 1;
+    state = SnapshotCodec::decode(data.dump());
+    const auto quote = Checkout(state).preview("alice", test::address(), "standard");
+    const auto beforeCheckout = state;
+    REQUIRE_THROWS_AS(Checkout(state).placeOrder("alice", quote, "place"),
+                      InvalidDomainDataException);
+    REQUIRE(state == beforeCheckout);
+    REQUIRE(SnapshotCodec::encode(state) == SnapshotCodec::encode(beforeCheckout));
+
+    state = test::store();
+    const auto orderId = test::place(state);
+    data = Json::parse(SnapshotCodec::encode(state));
+    data["next_sequence"] = std::numeric_limits<std::int64_t>::max() - 1;
+    state = SnapshotCodec::decode(data.dump());
+    const auto beforePayment = state;
+    REQUIRE_THROWS_AS(OrderProcessing(state).pay("alice", orderId, Money(110),
+                                                 PaymentMethod::SimulatedCard, true, "", "pay"),
+                      InvalidDomainDataException);
+    REQUIRE(state == beforePayment);
+    verify(state);
 }

@@ -50,9 +50,9 @@ AttemptOutcome OrderProcessing::pay(std::string_view actor, std::string_view ord
     order.assertOwner(actor);
     order.assertAwaitingPayment(now);
     assertReservation(state_.inventory_, order, ReservationStatus::Held);
-    const auto attemptId = state_.nextId("attempt");
-    const auto paymentId = accepted ? state_.nextId("payment") : std::string{};
     PreparedChange change(state_);
+    const auto attemptId = change.nextId("attempt");
+    const auto paymentId = accepted ? change.nextId("payment") : std::string{};
     auto result = change.payments().recordAttempt(attemptId, paymentId, order, amount, method, now,
                                                   accepted, reason, operationId);
     if (accepted) {
@@ -90,7 +90,7 @@ void OrderProcessing::cancel(std::string_view actor, std::string_view orderId,
         const auto payment = state_.payments_.findPaymentForOrder(order.id());
         detail::check<PaymentRuleException>(payment.has_value(),
                                             "У оплаченного заказа отсутствует платёж");
-        change.payments().refund(state_.nextId("refund"), operationId, payment->id(), std::nullopt,
+        change.payments().refund(change.nextId("refund"), operationId, payment->id(), std::nullopt,
                                  order.total(), now);
     }
     const auto shipment = state_.fulfillments_.find(order.id());
@@ -108,11 +108,11 @@ std::string OrderProcessing::startPicking(std::string_view orderId, std::string_
     }
     auto order = *state_.orders_.order(orderId);
     assertReservation(state_.inventory_, order, ReservationStatus::Confirmed);
-    auto id = state_.nextId("fulfillment");
+    PreparedChange change(state_);
+    auto id = change.nextId("fulfillment");
     Fulfillment shipment(id, order, state_.inventory_.warehouse().id());
     shipment.startPicking();
     order.beginFulfillment(state_.now(), operationId, id);
-    PreparedChange change(state_);
     detail::check<DuplicateEntityException>(
         change.fulfillments().emplace(order.id(), shipment).second, "У заказа уже есть исполнение");
     change.orders().replace(order);

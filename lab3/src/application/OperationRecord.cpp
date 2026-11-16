@@ -4,6 +4,15 @@
 #include "shop/common/Validation.hpp"
 
 namespace shop {
+std::string unusedOperationId(const OperationJournal& journal, std::string_view preferred) {
+    const auto base = detail::text(preferred, "ID команды");
+    auto candidate = base;
+    std::size_t suffix = 0;
+    while (journal.contains(candidate)) {
+        candidate = base + "-" + std::to_string(++suffix);
+    }
+    return detail::text(candidate, "ID команды");
+}
 std::optional<OperationResult> replayOperation(const OperationJournal& journal,
                                                std::string_view operationId,
                                                const CommandSignature& signature) {

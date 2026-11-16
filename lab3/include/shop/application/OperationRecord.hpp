@@ -55,6 +55,8 @@ struct OperationRecord {
     bool operator==(const OperationRecord&) const = default;
 };
 using OperationJournal = std::map<std::string, OperationRecord>;
+/** Internal commands must not reserve or overwrite caller-selected journal keys. */
+std::string unusedOperationId(const OperationJournal& journal, std::string_view preferred);
 std::optional<OperationResult> replayOperation(const OperationJournal& journal,
                                                std::string_view operationId,
                                                const CommandSignature& signature);

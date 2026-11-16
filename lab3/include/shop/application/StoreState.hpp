@@ -69,6 +69,7 @@ class StoreState {
     friend class OrderProcessing;
     friend class ReturnProcessing;
     friend class SnapshotCodec;
+    static std::string allocateId(std::int64_t& sequence, std::string_view prefix);
     ProductCatalog catalog_;
     std::map<std::string, Customer> customers_;
     std::map<std::string, AddressBook> addressBooks_;

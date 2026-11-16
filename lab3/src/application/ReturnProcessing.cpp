@@ -79,9 +79,9 @@ std::string ReturnProcessing::open(std::string_view actor, std::string_view orde
             "У заказа уже есть активная заявка; истёкшие заявки закрываются отдельной командой");
     }
     auto lines = buildLines(*order, signature.returnSelections);
-    auto id = state_.nextId("return");
-    const ReturnRequest request(id, *order, std::move(lines), state_.now());
     PreparedChange change(state_);
+    auto id = change.nextId("return");
+    const ReturnRequest request(id, *order, std::move(lines), state_.now());
     change.returns().emplace(id, request);
     recordOperation(change.operations(), operationId, signature, id);
     change.commit();
@@ -97,7 +97,8 @@ std::string ReturnProcessing::inspect(std::string_view requestId,
     }
     auto request = detail::get(state_.returnRequests_, requestId);
     const auto order = state_.orders_.order(request.orderId());
-    auto id = state_.nextId("inspection");
+    PreparedChange change(state_);
+    auto id = change.nextId("inspection");
     ReturnInspection inspection(id, request, state_.now());
     for (const auto& result : signature.inspectionResults) {
         inspection.recordResult(result, request, order->returnPolicy());
@@ -110,7 +111,6 @@ std::string ReturnProcessing::inspect(std::string_view requestId,
     if (noneAccepted) {
         request.reject("По результатам осмотра нет принятых единиц", state_.now());
     }
-    PreparedChange change(state_);
     change.inspections().emplace(id, inspection);
     change.returns().at(request.id()) = std::move(request);
     recordOperation(change.operations(), operationId, signature, id);
@@ -170,7 +170,7 @@ Money ReturnProcessing::complete(std::string_view requestId, std::string_view op
         const auto payment = state_.payments_.findPaymentForOrder(order.id());
         detail::check<PaymentRuleException>(payment.has_value(),
                                             "Возврату не соответствует оплата");
-        refundId = state_.nextId("refund");
+        refundId = change.nextId("refund");
         change.payments().refund(*refundId, operationId, payment->id(), request.id(), amount,
                                  state_.now());
     }
@@ -211,7 +211,7 @@ std::vector<std::string> ReturnProcessing::closeExpiredUnreceived() {
     }
     for (const auto& id : closed) {
         const auto signature = signatureFor(CommandKind::ExpireReturn, "system", id);
-        const auto operation = "system-expire-return-" + id;
+        const auto operation = unusedOperationId(state_.operations_, "system-expire-return-" + id);
         auto request = detail::get(state_.returnRequests_, id);
         request.reject("NotReceivedInTime", state_.now());
         PreparedChange change(state_);

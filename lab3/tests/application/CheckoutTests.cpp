@@ -78,6 +78,31 @@ TEST_CASE(
     REQUIRE(paid.inventory().item("shirt-blue").reserved() == 3);
 }
 
+TEST_CASE(
+    "Order expiry skips occupied user operation IDs without overwriting their replay records") {
+    auto state = test::store(true);
+    const std::string base = "system-expire-order-1";
+    Checkout checkout(state);
+    const auto quote = checkout.preview("alice", test::address(), "standard");
+    const auto id = checkout.placeOrder("alice", quote, base);
+    OrderProcessing(state).extendPaymentDeadline("alice", id, base + "-1");
+    const auto userOperations = state.operations();
+    state.advanceClock(100);
+    REQUIRE(checkout.expireUnpaidOrders() == std::vector<std::string>{id});
+    REQUIRE(state.orders().order(id)->status() == OrderStatus::Expired);
+    REQUIRE(state.orders().order(id)->history().back().operationId() == base + "-2");
+    REQUIRE(state.inventory().item("shirt-blue").reserved() == 0);
+    REQUIRE(state.coupons().heldUses().empty());
+    REQUIRE(state.inventory().auditReservations(state.orders()).empty());
+    for (const auto& [key, record] : userOperations) {
+        REQUIRE(state.operations().at(key) == record);
+    }
+    const auto expired = state;
+    REQUIRE(checkout.expireUnpaidOrders().empty());
+    REQUIRE(checkout.placeOrder("alice", quote, base) == id);
+    REQUIRE(state == expired);
+}
+
 TEST_CASE("Moving cart selections folds variants into wishes and rolls back a late unknown SKU") {
     auto state = test::store();
     Checkout checkout(state);
@@ -109,15 +134,19 @@ TEST_CASE(
     const auto before = state;
     {
         PreparedChange change(state);
+        REQUIRE(change.nextId("discarded") == "discarded-1");
         change.carts().at("alice").clear();
     }
     REQUIRE(state == before);
     {
         PreparedChange change(state);
+        REQUIRE(change.nextId("committed") == "committed-1");
+        REQUIRE(change.nextId("committed") == "committed-2");
         change.carts().at("alice").clear();
         change.commit();
         change.commit();
     }
     REQUIRE(state.cart("alice").lines().empty());
     REQUIRE(before.cart("alice").totalUnits() == 3);
+    REQUIRE(state.nextId("following") == "following-3");
 }
