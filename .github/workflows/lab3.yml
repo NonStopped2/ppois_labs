@@ -1,8 +1,9 @@
-name: Lab 3 online store verification
+name: Lab 3 online store verification and releases
 
 on:
   push:
     branches: [main, feature/lab3]
+    tags: ['lab3-v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -11,6 +12,31 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect release scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      lab1: ${{ steps.scope.outputs.lab1 }}
+      lab2: ${{ steps.scope.outputs.lab2 }}
+      lab3: ${{ steps.scope.outputs.lab3 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Detect affected labs in the complete push
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_REF: ${{ github.ref }}
+          BEFORE_SHA: ${{ github.event.before }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: python3 tools/release_changes.py
+
   build:
     name: Store tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -111,3 +137,85 @@ jobs:
           name: lab3-unit-coverage
           path: build/lab3-coverage/lab3-unit-coverage-*/coverage.json
           if-no-files-found: warn
+
+  release:
+    name: Publish verified store release
+    needs: [changes, build, quality]
+    if: >-
+      github.event_name == 'push' &&
+      ((github.ref == 'refs/heads/main' && needs.changes.outputs.lab3 == 'true') ||
+       startsWith(github.ref, 'refs/tags/lab3-v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.release_tag.outputs.tag }}
+    steps:
+      - name: Select release tag
+        id: release_tag
+        env:
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_REF_NAME: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          if [[ "$RELEASE_REF" == 'refs/heads/main' ]]; then
+            [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+            tag="lab3-main-$RELEASE_SHA"
+          else
+            [[ "$RELEASE_REF" == "refs/tags/$RELEASE_REF_NAME" ]] || exit 1
+            [[ "$RELEASE_REF_NAME" =~ ^lab3-v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+            tag="$RELEASE_REF_NAME"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: lab3-release-*
+          merge-multiple: true
+          path: dist
+      - name: Verify release assets
+        run: |
+          cd dist
+          test -f ppois-lab3-linux-x86_64.tar.gz
+          test -f ppois-lab3-macos-arm64.tar.gz
+          test -f ppois-lab3-docs.tar.gz
+          for archive in *.tar.gz; do sha256sum --check "$archive.sha256"; done
+      - name: Publish release without moving existing tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_SHA: ${{ github.sha }}
+          RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
+        run: |
+          options=(--verify-tag --prerelease)
+          if [[ "$RELEASE_REF" == 'refs/heads/main' ]]; then
+            options=(--target "$RELEASE_SHA")
+          fi
+          gh release create "$RELEASE_TAG" dist/*.tar.gz dist/*.sha256 \
+            "${options[@]}" --latest=false --title "$RELEASE_TAG" --generate-notes
+
+  verify_published:
+    name: Verify published Linux package
+    needs: [release]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Download assets from the published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          gh release download "$RELEASE_TAG" --repo "$GH_REPO" --dir downloaded \
+            --pattern 'ppois-lab3-linux-x86_64.tar.gz*' --pattern 'ppois-lab3-docs.tar.gz*'
+      - name: Verify checksums extract and run published Linux CLI
+        run: |
+          python3 lab3/tools/package.py --verify-archive downloaded/ppois-lab3-linux-x86_64.tar.gz
+          python3 lab3/tools/package.py --verify-archive downloaded/ppois-lab3-docs.tar.gz --docs-only

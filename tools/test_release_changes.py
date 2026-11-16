@@ -43,7 +43,9 @@ class ReleaseScopeTests(unittest.TestCase):
     def test_tags_feature_pushes_prs_and_manual_runs_do_not_use_git(self):
         with patch.object(release_changes.subprocess, "run") as run:
             for event, ref in (("push", "refs/tags/lab1-v1.2.3"),
+                               ("push", "refs/tags/lab3-v0.1.0"),
                                ("push", "refs/heads/feature/lab2"),
+                               ("push", "refs/heads/feature/lab3"),
                                ("pull_request", "refs/pull/1/merge"),
                                ("workflow_dispatch", "refs/heads/main")):
                 self.assertEqual(release_changes.detect_changed_labs(event, ref, "", ""), set())
@@ -86,6 +88,19 @@ class ReleaseScopeTests(unittest.TestCase):
                 with patch.object(release_changes, "detect_changed_labs", return_value={"lab2"}):
                     release_changes.main()
             self.assertEqual(output.read_text(), "lab1=false\nlab2=true\nlab3=false\n")
+
+    def test_store_only_merge_does_not_republish_previous_labs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.git(root, "init", "-q", "--initial-branch=main")
+            before = self.commit_file(root, "README.md", "base")
+            self.git(root, "checkout", "-qb", "store")
+            self.commit_file(root, "lab3/src/catalog/Product.cpp", "store logic")
+            self.commit_file(root, ".github/workflows/lab3.yml", "store pipeline")
+            self.git(root, "checkout", "-q", "main")
+            self.git(root, "merge", "--no-ff", "store", "-m", "merge store")
+            after = self.git(root, "rev-parse", "HEAD")
+            self.assertEqual(self.detect(root, before, after), {"lab3"})
 
     def test_merge_and_squash_include_complete_topic_changes(self):
         for mode in ("--no-ff", "--squash"):
