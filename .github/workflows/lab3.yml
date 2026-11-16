@@ -14,13 +14,14 @@ jobs:
   build:
     name: Store tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-15]
     env:
       CXX: clang++
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
       ASAN_OPTIONS: halt_on_error=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
@@ -39,11 +40,24 @@ jobs:
         run: cmake --build build/lab3-test --parallel 4
       - name: Run C++ and tooling tests
         run: ctest --test-dir build/lab3-test -L '^lab3-' --no-tests=error --output-on-failure
+      - name: Configure standalone release without testing dependencies
+        run: >-
+          cmake -S . -B build/lab3-release -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_LAB1=OFF -DBUILD_LAB2=OFF -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF
+      - name: Build native application
+        run: cmake --build build/lab3-release --target shop_cli --parallel 4
+      - name: Install relocate archive and test extracted native package
+        run: python3 lab3/tools/package.py --build-dir build/lab3-release --output-dir build/packages
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: lab3-release-${{ matrix.os }}
+          path: build/packages/*.tar.gz*
+          if-no-files-found: error
 
   quality:
     name: Store coverage and quality
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -54,7 +68,7 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-18 llvm-18 cppcheck
+          sudo apt-get install -y clang-18 llvm-18 cppcheck doxygen
           python3 -m pip install clang-format==18.1.8
       - name: Check quality and release routing
         env:
@@ -82,6 +96,15 @@ jobs:
         run: >-
           python3 lab3/tools/coverage.py --build-dir build/lab3-coverage --with-ui
           --llvm-cov llvm-cov-18 --llvm-profdata llvm-profdata-18
+      - name: Generate and package documentation
+        run: |
+          cmake --build build/lab3-coverage --target lab3_docs
+          python3 lab3/tools/package.py --build-dir build/lab3-coverage --output-dir build/packages --docs-only
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: lab3-release-docs
+          path: build/packages/*.tar.gz*
+          if-no-files-found: error
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

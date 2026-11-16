@@ -84,6 +84,9 @@ TEST_CASE(
     REQUIRE(completed.averageOrderValue(state.reportContext()) == Money(66));
     REQUIRE(completed.skuStatistics().at("shirt-blue").deliveredUnits == 3);
     REQUIRE(completed.skuStatistics().at("shirt-blue").returnedUnits == 1);
+    REQUIRE(SalesReport::buildSkuSummary(TimeWindow(20, 26), state.reportContext()) ==
+            completed.skuStatistics());
+    REQUIRE(SalesReport::buildSkuSummary(TimeWindow(0, 15), state.reportContext()).empty());
     const auto all = SalesReport::buildFinancialSummary(TimeWindow(0, 30), state.reportContext());
     REQUIRE(all.captured().checkedSubtract(all.refunded()) == Money(76));
     REQUIRE(all.deliveredNetGoods() == Money(66));

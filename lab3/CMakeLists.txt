@@ -69,6 +69,7 @@ FetchContent_Declare(nlohmann_json
     URL https://codeload.github.com/nlohmann/json/tar.gz/refs/tags/v3.12.0
     URL_HASH SHA256=4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187)
 set(JSON_BuildTests OFF CACHE BOOL "Do not build third-party JSON tests" FORCE)
+set(JSON_Install OFF CACHE BOOL "Do not install third-party headers with the store" FORCE)
 FetchContent_MakeAvailable(nlohmann_json)
 add_library(shop_persistence
     persistence/SnapshotValues.cpp persistence/SnapshotEvents.cpp
@@ -88,6 +89,20 @@ target_include_directories(shop_ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/app")
 target_link_libraries(shop_ui PUBLIC shop_persistence)
 add_executable(shop_cli app/main.cpp)
 target_link_libraries(shop_cli PRIVATE shop_ui)
+install(TARGETS shop_cli RUNTIME DESTINATION bin COMPONENT lab3)
+install(FILES README.md DESTINATION share/ppois_lab3 COMPONENT lab3)
+install(DIRECTORY docs/ DESTINATION share/ppois_lab3/docs COMPONENT lab3 FILES_MATCHING PATTERN "*.md")
+install(DIRECTORY examples/ DESTINATION share/ppois_lab3/examples COMPONENT lab3)
+install(FILES "${nlohmann_json_SOURCE_DIR}/LICENSE.MIT"
+    DESTINATION share/ppois_lab3/licenses RENAME nlohmann-json-LICENSE.MIT COMPONENT lab3)
+find_package(Doxygen QUIET)
+if(DOXYGEN_FOUND)
+    configure_file(Doxyfile.in "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile" @ONLY)
+    add_custom_target(lab3_docs
+        COMMAND "${DOXYGEN_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Generating online-store HTML documentation" VERBATIM)
+endif()
 if(MSVC)
     target_compile_options(shop_core PRIVATE /W4)
 else()
@@ -159,4 +174,7 @@ if(BUILD_TESTING)
     add_test(NAME lab3-cli
         COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/cli_tests.py" "$<TARGET_FILE:shop_cli>")
     set_tests_properties(lab3-cli PROPERTIES LABELS "lab3-cli" TIMEOUT 120)
+    add_test(NAME lab3-tools.package
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/test_package.py")
+    set_tests_properties(lab3-tools.package PROPERTIES LABELS "lab3-tools")
 endif()

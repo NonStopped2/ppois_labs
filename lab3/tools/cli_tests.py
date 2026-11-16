@@ -33,9 +33,12 @@ class StoreCliTests(unittest.TestCase):
             self.assertIn("Ошибка", self.run_cli(line + "\n", expected=1))
 
     def test_installed_example(self):
-        output = self.run_cli(arguments=["--script", str(EXAMPLES / "purchase.input")])
-        self.assertIn("Заказ: order-1", output)
-        self.assertIn("Сверка: 0 расхождений", output)
+        examples = {"purchase.input": "Сверка: 0 расхождений",
+                    "coupon_cancel.input": "Расхождений: 0", "new_product.input": "ИТОГО:"}
+        for name, marker in examples.items():
+            with self.subTest(example=name):
+                output = self.run_cli(arguments=["--script", str(EXAMPLES / name)])
+                self.assertIn(marker, output)
 
     def test_real_files_across_processes_keep_idempotent_payment(self):
         with tempfile.TemporaryDirectory(prefix="shop-cli-files-") as directory:

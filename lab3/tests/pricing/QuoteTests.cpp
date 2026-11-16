@@ -67,6 +67,10 @@ TEST_CASE("Delivery compares address package limits and free-shipping thresholds
     REQUIRE(policy.options().size() == 1);
     REQUIRE(policy.handlingDuration() == 10);
     REQUIRE(policy.transitDurations().at("standard").first == 100);
+    const auto eligible = policy.eligibleOptions(test::address(), lines);
+    REQUIRE(eligible.size() == 1);
+    REQUIRE(eligible.front().id() == "standard");
+    REQUIRE(policy.eligibleOptions(Address("BY", "110001", "Город", "Улица", "1"), lines).empty());
     REQUIRE(policy.estimateArrival("standard", 10) == TimeWindow(120, 220));
     REQUIRE(policy.cheapestEligible(test::address(), lines, Money(1000)).id() == "standard");
     REQUIRE_THROWS_AS(policy.cheapestEligible(test::address(), {}, Money{}), DeliveryRuleException);
