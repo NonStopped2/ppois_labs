@@ -84,6 +84,12 @@ void StoreState::replaceCatalog(const ProductCatalog& values) {
 void StoreState::changePrice(std::string_view sku, Money amount) {
     prices_.changePrice(catalog_, sku, amount, now());
 }
+void StoreState::applyCategoryPriceChange(std::string_view categoryId, std::int64_t changeBps) {
+    prices_.applyCategoryPriceChange(catalog_, categoryId, changeBps, now());
+}
+void StoreState::applyStockCount(std::string_view sku, std::int64_t actual) {
+    inventory_.applyStockCount(sku, actual);
+}
 void StoreState::addPromotion(const Promotion& offer) {
     for (const auto& id : offer.categoryIds()) {
         catalog_.category(id);

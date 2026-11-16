@@ -75,6 +75,12 @@ void ProductCatalog::publish(std::string_view productId) {
     candidate.publish();
     replaceProduct(std::move(candidate));
 }
+void ProductCatalog::replaceAttributeSchema(std::string_view productId,
+                                            std::vector<ProductAttribute> schema) {
+    auto candidate = product(productId);
+    candidate.replaceAttributeSchema(std::move(schema));
+    replaceProduct(std::move(candidate));
+}
 void ProductCatalog::archiveProduct(std::string_view productId) {
     auto candidate = product(productId);
     candidate.archive();

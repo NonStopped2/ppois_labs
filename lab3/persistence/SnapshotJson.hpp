@@ -25,19 +25,17 @@ std::map<std::string, std::string> stringMap(const Json& data);
 std::map<std::string, std::int64_t> quantities(const Json& data);
 
 template <class E> E enumeration(const Json& data, E maximum) {
-    const auto value = integer(data);
-    require(value >= 0 && value <= static_cast<std::int64_t>(maximum),
+    const auto parsed = integer(data);
+    require(parsed >= 0 && parsed <= static_cast<std::int64_t>(maximum),
             "Неизвестное значение перечисления");
-    return static_cast<E>(value);
+    return static_cast<E>(parsed);
 }
-template <class E> Json enumValue(E value) {
-    return static_cast<std::int64_t>(value);
+template <class E> Json enumValue(E item) {
+    return static_cast<std::int64_t>(item);
 }
 template <class Range, class Projection> Json arrayOf(const Range& range, Projection projection) {
     Json result = Json::array();
-    for (const auto& entry : range) {
-        result.push_back(projection(entry));
-    }
+    std::transform(range.begin(), range.end(), std::back_inserter(result), projection);
     return result;
 }
 template <class T, class Decoder> std::vector<T> vectorOf(const Json& data, Decoder decoder) {
@@ -46,8 +44,8 @@ template <class T, class Decoder> std::vector<T> vectorOf(const Json& data, Deco
     std::transform(entries.begin(), entries.end(), std::back_inserter(result), decoder);
     return result;
 }
-template <class Map, class Value> void insertUnique(Map& map, const std::string& key, Value value) {
-    require(map.emplace(key, std::move(value)).second, "Повторный ID в снимке: " + key);
+template <class Map, class Value> void insertUnique(Map& map, const std::string& key, Value item) {
+    require(map.emplace(key, std::move(item)).second, "Повторный ID в снимке: " + key);
 }
 
 Json value(const Address& address);

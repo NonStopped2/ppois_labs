@@ -1,0 +1,21 @@
+# Whole purchase with a simulated decline, shipment and partial return.
+as customer alice
+cart add SHIRT-BLUE 3
+order preview standard home
+order place example-place
+order pay order-1 3738 card no example-decline "Учебный отказ"
+order pay order-1 3738 card yes example-pay
+as operator
+fulfill start order-1 example-start
+fulfill pick order-1 SHIRT-BLUE 3 example-pick
+fulfill pack order-1 example-pack
+fulfill ship order-1 TRACK-EXAMPLE example-ship
+as customer alice
+order deliver order-1 example-deliver
+return open order-1 example-open SHIRT-BLUE 1 changed-mind
+as operator
+return inspect return-7 example-inspect SHIRT-BLUE 1 1 1 opened
+return complete return-7 example-complete
+clock advance 1
+report 0 1001
+quit

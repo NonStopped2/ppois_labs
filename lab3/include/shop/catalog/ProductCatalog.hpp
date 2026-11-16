@@ -36,6 +36,7 @@ class ProductCatalog {
     void addCategory(const Category& category);
     void addProduct(const Product& product);
     void addVariant(std::string_view productId, const ProductVariant& variant);
+    void replaceAttributeSchema(std::string_view productId, std::vector<ProductAttribute> schema);
     void publish(std::string_view productId);
     void archiveProduct(std::string_view productId);
     void restoreProductDraft(std::string_view productId);

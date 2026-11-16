@@ -25,6 +25,8 @@ class StoreState {
     void replaceCustomer(const Customer& customer);
     void replaceCatalog(const ProductCatalog& catalog);
     void changePrice(std::string_view sku, Money price);
+    void applyCategoryPriceChange(std::string_view categoryId, std::int64_t changeBps);
+    void applyStockCount(std::string_view sku, std::int64_t actual);
     void addPromotion(const Promotion& promotion);
     void registerCoupon(const Coupon& coupon);
     void disableCoupon(std::string_view code);

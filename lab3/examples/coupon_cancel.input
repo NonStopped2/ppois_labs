@@ -1,0 +1,11 @@
+as customer alice
+cart add SHIRT-RED 2
+cart coupon WELCOME
+order preview standard home
+order place coupon-place
+order show order-1
+order cancel order-1 coupon-cancel
+coupon usage WELCOME
+as operator
+stock audit
+quit

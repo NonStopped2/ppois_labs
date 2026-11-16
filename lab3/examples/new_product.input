@@ -1,0 +1,16 @@
+category add kitchen Кухня root
+product add mug kitchen Кружка "Керамическая кружка"
+product attribute mug capacity integer yes 250 500
+variant add mug MUG-250 "250 мл" 300 100 100 100 capacity=250
+variant add mug MUG-500 "500 мл" 400 100 100 150 capacity=500
+product publish mug
+price set MUG-250 700
+price set MUG-500 900
+receipt post mugs Поставщик MUG-250 10 300 batch-250 MUG-500 10 400 batch-500
+catalog search Кружка root capacity=250
+stock show
+as customer alice
+wish add mug
+wish to-cart mug MUG-250
+order preview pickup home
+quit
