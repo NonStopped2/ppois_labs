@@ -122,7 +122,7 @@ void printRange(Output& out, std::string_view label, auto&& range) {
     out << '\n';
 }
 
-void sortNumbers(Graph&, Input& input, Output& out) {
+void sortNumbers(const Graph&, Input& input, Output& out) {
     const auto algorithm = readSort(input);
     std::vector<int> numbers;
     for (std::string token; input >> token;) {
@@ -133,7 +133,7 @@ void sortNumbers(Graph&, Input& input, Output& out) {
     printRange(out, "After", numbers);
 }
 
-void sortTasks(Graph&, Input& input, Output& out) {
+void sortTasks(const Graph&, Input& input, Output& out) {
     const auto algorithm = readSort(input);
     expectEnd(input);
     Task tasks[] = {{"Write tests", 2}, {"Fix build", 1}, {"Review docs", 2}, {"Ship release", 3}};
@@ -167,7 +167,7 @@ void addVertex(Graph& graph, Input& input, Output& out) {
     out << "Vertex " << id << '\n';
 }
 
-void getVertex(Graph& graph, Input& input, Output& out) {
+void getVertex(const Graph& graph, Input& input, Output& out) {
     const auto id = readId(input);
     expectEnd(input);
     out << graph.value(id) << '\n';
@@ -180,13 +180,13 @@ void removeVertex(Graph& graph, Input& input, Output& out) {
     out << "OK\n";
 }
 
-void hasVertex(Graph& graph, Input& input, Output& out) {
+void hasVertex(const Graph& graph, Input& input, Output& out) {
     const auto id = readId(input);
     expectEnd(input);
     out << (graph.containsVertex(id) ? "yes" : "no") << '\n';
 }
 
-void showDegree(Graph& graph, Input& input, Output& out) {
+void showDegree(const Graph& graph, Input& input, Output& out) {
     const auto id = readId(input);
     expectEnd(input);
     const auto incoming = graph.inDegree(id);
@@ -195,11 +195,12 @@ void showDegree(Graph& graph, Input& input, Output& out) {
         << '\n';
 }
 
-template <auto Operation> void arcCommand(Graph& graph, Input& input, Output& out) {
+template <auto Operation, class GraphRef = Graph>
+void arcCommand(GraphRef& graph, Input& input, Output& out) {
     const auto from = readId(input);
     const auto to = readId(input);
     expectEnd(input);
-    using Result = std::invoke_result_t<decltype(Operation), Graph&, Id, Id>;
+    using Result = std::invoke_result_t<decltype(Operation), GraphRef&, Id, Id>;
     if constexpr (std::is_void_v<Result>) {
         std::invoke(Operation, graph, from, to);
         out << "OK\n";
@@ -230,7 +231,7 @@ void printWalk(Output& out, const std::string& name, auto range, bool reverse) {
     }
 }
 
-void walkGraph(Graph& graph, Input& input, Output& out) {
+void walkGraph(const Graph& graph, Input& input, Output& out) {
     const auto name = readToken(input, "walk type");
     if (name == "vertices") {
         printWalk(out, name, graph.vertices(), readReverse(input));
@@ -247,12 +248,12 @@ void walkGraph(Graph& graph, Input& input, Output& out) {
     }
 }
 
-void showGraph(Graph& graph, Input& input, Output& out) {
+void showGraph(const Graph& graph, Input& input, Output& out) {
     expectEnd(input);
     out << graph;
 }
 
-void countGraph(Graph& graph, Input& input, Output& out) {
+void countGraph(const Graph& graph, Input& input, Output& out) {
     expectEnd(input);
     out << "Vertices: " << graph.vertexCount() << ", arcs: " << graph.edgeCount() << '\n';
 }
@@ -263,16 +264,16 @@ void clearGraph(Graph& graph, Input& input, Output& out) {
     out << "OK\n";
 }
 
-void showHelp(Graph&, Input& input, Output& out) {
+void showHelp(const Graph&, Input& input, Output& out) {
     expectEnd(input);
     out << helpText;
 }
 
-using Command = void (*)(Graph&, Input&, Output&);
+using Command = std::function<void(Graph&, Input&, Output&)>;
 using Entry = std::pair<std::string_view, Command>;
 
 void execute(Graph& graph, const std::string& name, Input& input, Output& out) {
-    constexpr Entry commands[] = {
+    static const Entry commands[] = {
         {"sort", sortNumbers},
         {"tasks", sortTasks},
         {"demo", demo},
@@ -283,8 +284,8 @@ void execute(Graph& graph, const std::string& name, Input& input, Output& out) {
         {"degree", showDegree},
         {"add-arc", arcCommand<&Graph::addEdge>},
         {"remove-arc", arcCommand<static_cast<void (Graph::*)(Id, Id)>(&Graph::removeEdge)>},
-        {"has-arc", arcCommand<&Graph::containsEdge>},
-        {"arc-degree", arcCommand<&Graph::edgeDegree>},
+        {"has-arc", arcCommand<&Graph::containsEdge, const Graph>},
+        {"arc-degree", arcCommand<&Graph::edgeDegree, const Graph>},
         {"walk", walkGraph},
         {"show", showGraph},
         {"count", countGraph},

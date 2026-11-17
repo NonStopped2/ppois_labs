@@ -27,10 +27,9 @@ def main():
     subprocess.run([args.clang_format, "--dry-run", "--Werror", *map(str, sources)], check=True)
     for source in (LAB / "tools").glob("*.py"):
         ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
-    # A single command table uses the same callback signature for read and write operations.
     subprocess.run(["cppcheck", "--std=c++20", "--enable=warning,style,performance,portability",
                     "--error-exitcode=1", "--inline-suppr", "--suppress=missingIncludeSystem",
-                    f"--suppress=constParameterCallback:{LAB / 'app/Console.cpp'}", "--quiet",
+                    "--quiet",
                     "-I", str(LAB / "include"), str(LAB / "app")], check=True)
     for header in headers:
         subprocess.run([args.cxx, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
