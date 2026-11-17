@@ -207,7 +207,8 @@ void arcCommand(GraphRef& graph, Input& input, Output& out) {
     } else if constexpr (std::is_same_v<Result, bool>) {
         out << (std::invoke(Operation, graph, from, to) ? "yes" : "no") << '\n';
     } else {
-        out << "Arc degree: " << std::invoke(Operation, graph, from, to) << '\n';
+        const auto degree = std::invoke(Operation, graph, from, to);
+        out << "Arc degree: " << degree << '\n';
     }
 }
 

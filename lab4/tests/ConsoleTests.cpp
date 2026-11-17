@@ -67,3 +67,10 @@ TEST_CASE("Console handles invalid input and keeps accepting commands until EOF"
     }
     CHECK(output.find("Vertices: 3, arcs: 3") != std::string::npos);
 }
+
+TEST_CASE("Arc degree reports errors before writing a result", "[ui]") {
+    const auto output = run("demo\narc-degree 1 3\narc-degree 1 77\narc-degree 1 2\nquit\n");
+    CHECK(output.find("lab4> Error: arc does not exist\n"
+                      "lab4> Error: unknown vertex ID\n"
+                      "lab4> Arc degree: 2\n") != std::string::npos);
+}

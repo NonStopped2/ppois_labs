@@ -2,9 +2,13 @@
 #include "lab4/Task.hpp"
 
 #include <algorithm>
+#include <forward_list>
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <ranges>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -89,4 +93,41 @@ TEST_CASE("Default comparison sorts only the requested subrange and supports bit
     flags = {true, true, false, false};
     lab4::cocktailSort(flags.begin(), flags.end());
     CHECK(flags == expected);
+}
+
+TEST_CASE("Both sorts accept writable views that return bit proxies", "[core]") {
+    const std::vector<bool> expected = {false, false, true, true};
+    auto flags = std::vector<bool>{true, false, true, false};
+    auto view = flags | std::views::transform([](auto bit) { return bit; });
+    lab4::cocktailSort(view.begin(), view.end());
+    CHECK(flags == expected);
+
+    flags = {true, true, false, false};
+    lab4::strandSort(view.begin(), view.end());
+    CHECK(flags == expected);
+}
+
+TEST_CASE("Strand sort accepts a forward iterator and applies a permutation cycle", "[core]") {
+    std::forward_list<int> values = {2, 3, 1};
+    lab4::strandSort(values.begin(), values.end());
+    CHECK(values == std::forward_list<int>{1, 2, 3});
+}
+
+TEST_CASE("Strand sort preserves the input if comparison throws", "[core]") {
+    auto first = std::make_unique<int>(2);
+    auto second = std::make_unique<int>(1);
+    const auto* firstAddress = first.get();
+    const auto* secondAddress = second.get();
+    std::unique_ptr<int> values[] = {std::move(first), std::move(second)};
+
+    const auto compare = [](const auto& left, const auto& right) {
+        if (*left == 1) {
+            throw std::runtime_error("comparison failed");
+        }
+        return *left < *right;
+    };
+    CHECK_THROWS_AS(lab4::strandSort(std::begin(values), std::end(values), compare),
+                    std::runtime_error);
+    CHECK(values[0].get() == firstAddress);
+    CHECK(values[1].get() == secondAddress);
 }
