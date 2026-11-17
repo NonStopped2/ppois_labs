@@ -8,7 +8,9 @@
 
 namespace shop {
 
-/** Coupon code with both store-wide and per-customer use limits. */
+/** Coupon.
+ * Ограничивает использование кода сроком, общим лимитом и лимитом на покупателя.
+ */
 class Coupon {
   public:
     Coupon(std::string_view code, std::string_view promotionId, std::int64_t totalUseLimit,

@@ -9,6 +9,7 @@ namespace shop {
 std::optional<std::pair<std::int64_t, std::int64_t>> RatingSummary::average() const {
     return count == 0 ? std::nullopt : std::optional(std::make_pair(totalScore, count));
 }
+// Право на отзыв следует из подтверждённой покупки с оставшимися у покупателя единицами.
 void ReviewBook::addVerifiedReview(std::string_view id, const Customer& customer,
                                    const Order& order, const Product& product,
                                    const std::map<std::string, std::int64_t>& returnedQuantities,

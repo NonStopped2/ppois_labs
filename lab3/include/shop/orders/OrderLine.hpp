@@ -3,7 +3,10 @@
 #include "shop/pricing/QuoteLine.hpp"
 
 namespace shop {
-/** Purchase facts survive catalog, price and return-policy edits. */
+/** OrderLine.
+ * Фиксирует данные купленного SKU, включая скидку, возвратность и габариты. Поддерживает
+ * пересчёт доставки без текущего каталога.
+ */
 class OrderLine {
   public:
     explicit OrderLine(const QuoteLine& line);

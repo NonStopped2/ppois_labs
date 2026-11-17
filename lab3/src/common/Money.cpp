@@ -9,7 +9,7 @@ constexpr auto Minimum = std::numeric_limits<std::int64_t>::min();
 constexpr auto Maximum = std::numeric_limits<std::int64_t>::max();
 constexpr std::int64_t BasisPointScale = 10000;
 
-// Long division keeps intermediate products representable even near INT64_MAX.
+// Деление в столбик удерживает промежуточные значения в допустимых пределах даже около INT64_MAX.
 std::pair<std::uint64_t, std::uint64_t> fraction(std::uint64_t value, std::uint64_t numerator,
                                                  std::uint64_t divisor) {
     std::uint64_t quotient = 0;
@@ -82,7 +82,7 @@ Money Money::percentageFloor(std::int64_t basisPoints) const {
 }
 
 std::string Money::format() const {
-    // Unsigned arithmetic handles the magnitude of INT64_MIN without negating it.
+    // Модуль INT64_MIN вычисляем без смены знака в знаковом типе, где результат не представим.
     const auto magnitude = kopecks_ < 0 ? std::uint64_t{0} - static_cast<std::uint64_t>(kopecks_)
                                         : static_cast<std::uint64_t>(kopecks_);
     const auto cents = magnitude % 100;

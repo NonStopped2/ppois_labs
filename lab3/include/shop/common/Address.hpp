@@ -5,7 +5,10 @@
 
 namespace shop {
 
-/** Validated address snapshot, independent of future address-book changes. */
+/** Address.
+ * Хранит проверенный адрес как значение. Изменение адресной книги не меняет адрес в
+ * оформленном заказе.
+ */
 class Address {
   public:
     Address(std::string_view country, std::string_view postalCode, std::string_view city,

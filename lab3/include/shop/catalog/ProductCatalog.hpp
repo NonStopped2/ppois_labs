@@ -30,7 +30,10 @@ struct ProductComparison {
     std::map<std::string, ComparisonAttribute> attributes;
 };
 
-/** Owns the catalog and enforces tree integrity and global SKU uniqueness. */
+/** ProductCatalog.
+ * Владеет деревом категорий и индексом SKU. Переносы и изменения сохраняют связи и
+ * уникальность SKU.
+ */
 class ProductCatalog {
   public:
     void addCategory(const Category& category);

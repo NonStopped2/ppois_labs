@@ -8,6 +8,10 @@
 namespace shop {
 class ReturnInspection;
 enum class ReturnStatus { Submitted, Inspected, Completed, Rejected, Withdrawn };
+/** ReturnRequest.
+ * Хранит заявку и её исход. Связывает запрос с осмотром и денежным возвратом после
+ * обработки.
+ */
 class ReturnRequest {
   public:
     ReturnRequest(std::string_view id, const Order& order, std::vector<ReturnLine> lines,

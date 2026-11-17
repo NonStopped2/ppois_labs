@@ -6,6 +6,10 @@
 
 namespace shop {
 enum class ReceiptStatus { Draft, Posted };
+/** StockReceipt.
+ * Собирает строки поставки и проверяет документ перед проведением. Повтор сверяется с
+ * содержимым документа.
+ */
 class StockReceipt {
   public:
     StockReceipt(std::string_view id, std::string_view supplierReference,

@@ -59,6 +59,7 @@ void Product::addVariant(const ProductVariant& variant) {
     variants_.push_back(variant);
 }
 
+// Новая схема должна подходить каждому уже созданному варианту.
 void Product::replaceAttributeSchema(std::vector<ProductAttribute> schema) {
     detail::check<CatalogRuleException>(status_ == ProductStatus::Draft,
                                         "Схема изменяется только в черновике");
@@ -70,6 +71,7 @@ void Product::replaceAttributeSchema(std::vector<ProductAttribute> schema) {
     attributes_.swap(schema);
 }
 
+// Для видимости в продаже нужен хотя бы один доступный вариант.
 void Product::publish() {
     detail::check<CatalogRuleException>(
         status_ == ProductStatus::Draft &&

@@ -9,7 +9,10 @@ namespace shop {
 
 enum class CustomerStatus { Active, Restricted };
 
-/** Purchase restriction does not prevent delivery or return of earlier purchases. */
+/** Customer.
+ * Хранит контакты и ограничения покупателя. Ограничение блокирует новые покупки, уже
+ * оформленные заказы можно сопровождать.
+ */
 class Customer {
   public:
     Customer(std::string_view id, ContactDetails contacts, Timestamp registeredAt);

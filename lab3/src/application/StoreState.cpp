@@ -61,7 +61,7 @@ void StoreState::replaceCustomer(const Customer& entry) {
     customers_.swap(candidate);
 }
 void StoreState::replaceCatalog(const ProductCatalog& values) {
-    // Catalog edits may archive entries, but cannot orphan existing operational references.
+    // Каталог может архивировать записи, сохраняя ссылки из действующих операций.
     for (const auto& [id, entry] : catalog_.products()) {
         values.product(id);
     }

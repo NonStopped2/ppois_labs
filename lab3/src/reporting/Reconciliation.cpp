@@ -96,6 +96,7 @@ void reconcilePayment(const Payment& payment, Timestamp end, const ReportContext
     }
 }
 } // namespace
+// Сверяем связанные документы и события. Расхождения выводятся отдельно от финансовых итогов.
 std::vector<std::string> SalesReport::reconcile(const ReportContext& context) const {
     report_detail::validatePeriod(period_, context);
     std::vector<std::string> issues;

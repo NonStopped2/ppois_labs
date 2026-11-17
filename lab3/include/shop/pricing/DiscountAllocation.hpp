@@ -7,7 +7,10 @@
 
 namespace shop {
 
-/** Frozen line discount; consecutive unit ranges account for every kopeck exactly once. */
+/** DiscountAllocation.
+ * Распределяет скидку по единицам строки. При возврате всех единиц последовательные частичные
+ * возвраты в сумме дают чистую стоимость строки.
+ */
 class DiscountAllocation {
   public:
     DiscountAllocation(std::string_view sku, std::int64_t quantity, Money grossTotal,

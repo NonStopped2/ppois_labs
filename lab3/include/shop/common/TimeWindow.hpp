@@ -4,7 +4,10 @@
 
 namespace shop {
 
-/** Half-open interval [startsAt, endsAt) in seconds of the educational clock. */
+/** TimeWindow.
+ * Задаёт полуинтервал учебного времени. Левая граница входит в интервал, правая
+ * исключается.
+ */
 class TimeWindow {
   public:
     TimeWindow(Timestamp startsAt, Timestamp endsAt);

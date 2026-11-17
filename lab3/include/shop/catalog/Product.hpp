@@ -9,7 +9,10 @@ namespace shop {
 
 enum class ProductStatus { Draft, Published, Archived };
 
-/** Cohesive aggregate of a product schema and its sellable variants. */
+/** Product.
+ * Объединяет схему характеристик и варианты. Публикация возможна только при наличии
+ * доступного варианта.
+ */
 class Product {
   public:
     Product(std::string_view id, std::string_view categoryId, std::string_view title,

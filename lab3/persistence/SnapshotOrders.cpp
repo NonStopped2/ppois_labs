@@ -93,7 +93,7 @@ Order paidPrefix(const Order& finalOrder) {
     }
     require(!history.empty(), "Нет оплаты для исполнения заказа");
     data["status"] = enumValue(OrderStatus::Confirmed);
-    // Delivery/deadline cannot change after successful payment.
+    // После успешной оплаты условия доставки и срок оплаты фиксируются.
     return order(data);
 }
 } // namespace shop::snapshot

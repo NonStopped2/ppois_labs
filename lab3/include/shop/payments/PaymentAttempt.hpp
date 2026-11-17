@@ -8,6 +8,10 @@
 namespace shop {
 enum class PaymentMethod { SimulatedCard, SimulatedTransfer };
 enum class AttemptStatus { Pending, Succeeded, Declined };
+/** PaymentAttempt.
+ * Хранит попытку оплаты, её сумму и один итоговый исход. Успех и отказ являются конечными
+ * состояниями.
+ */
 class PaymentAttempt {
   public:
     PaymentAttempt(std::string_view id, std::string_view orderId, Money amount,

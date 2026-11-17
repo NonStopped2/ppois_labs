@@ -54,6 +54,23 @@ TEST_CASE(
             application.state());
 }
 
+TEST_CASE("Console rejects invalid UTF-8 before it can prevent saving the store") {
+    std::ostringstream output;
+    ConsoleApplication application(makeDemoStore(), output);
+    const auto before = application.state();
+    const std::vector<std::string> invalid{"\xff",         "\xe2\x82",     "\xe2!\x82",
+                                           "\xe0\x80\x80", "\xed\xa0\x80", "\xf4\x90\x80\x80"};
+    for (const auto& text : invalid) {
+        const auto errors = application.errorCount();
+        application.execute("product add broken clothes title \"" + text + "\"");
+        REQUIRE(application.errorCount() == errors + 1);
+        REQUIRE(application.state() == before);
+    }
+    REQUIRE(output.str().find("некорректный UTF-8") != std::string::npos);
+    REQUIRE(SnapshotCodec::decode(SnapshotCodec::encode(application.state())) == before);
+    REQUIRE(InputReader::tokenize("\"ёж € \xf0\x9f\x93\xa6\"").front() == "ёж € \xf0\x9f\x93\xa6");
+}
+
 TEST_CASE("Console checks roles ownership and extra arguments before domain mutation") {
     std::ostringstream output;
     ConsoleApplication application(makeDemoStore(), output);

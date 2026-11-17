@@ -6,6 +6,9 @@
 #include <vector>
 
 namespace shop::ui {
+/** InputReader.
+ * Разбирает кавычки и параметры строки, преобразует числа и ответы yes/no.
+ */
 class InputReader {
   public:
     static std::vector<std::string> tokenize(std::string_view line);

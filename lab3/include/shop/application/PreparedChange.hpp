@@ -6,7 +6,8 @@
 #include <utility>
 
 namespace shop::detail {
-/** Lazily copies a touched root once. No callbacks or allocations occur during commit. */
+/** Копирует затронутое значение по первому запросу. Фиксация обходится без аллокаций и вызовов
+ * извне. */
 template <class T> class StagedValue {
   public:
     explicit StagedValue(T& target) : target_(target) {}
@@ -31,6 +32,10 @@ template <class T> class StagedValue {
 } // namespace shop::detail
 
 namespace shop {
+/** PreparedChange.
+ * Лениво копирует затронутые реестры. Фиксация обменом публикует документы и счётчик ID
+ * одновременно.
+ */
 class PreparedChange {
   public:
     explicit PreparedChange(StoreState& state)
@@ -114,7 +119,7 @@ class PreparedChange {
     detail::StagedValue<std::map<std::string, ReturnRequest>> returns_;
     detail::StagedValue<std::map<std::string, ReturnInspection>> inspections_;
     detail::StagedValue<ReviewBook> reviews_;
-    // Allocated IDs become observable only together with the documents that use them.
+    // Идентификаторы публикуются одновременно с документами, в которых они используются.
     detail::StagedValue<std::int64_t> nextSequence_;
     bool committed_ = false;
 };

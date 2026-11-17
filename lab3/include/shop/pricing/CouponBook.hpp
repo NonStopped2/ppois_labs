@@ -26,7 +26,10 @@ struct CouponUsage {
     bool operator==(const CouponUsage&) const = default;
 };
 
-/** Held uses consume limits already; payment confirms without rechecking expired offer windows. */
+/** CouponBook.
+ * Хранит коды и их использования. Временное удержание занимает квоту до подтверждения
+ * оплаты или освобождения.
+ */
 class CouponBook {
   public:
     void registerCode(const Coupon& coupon, const Promotion& promotion);

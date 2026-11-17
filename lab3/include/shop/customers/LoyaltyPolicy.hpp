@@ -8,7 +8,10 @@
 
 namespace shop {
 
-/** Tier thresholds and discount ceilings are explicit store configuration. */
+/** LoyaltyPolicy.
+ * Определяет уровень и предел скидки по обороту. Правила уровня хранятся отдельно от счёта
+ * клиента.
+ */
 class LoyaltyPolicy {
   public:
     explicit LoyaltyPolicy(std::vector<Money> thresholds = {Money{}, Money(100000), Money(500000)},

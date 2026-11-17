@@ -7,7 +7,10 @@
 
 namespace shop {
 
-/** Current SKU price with explicit change time and local revision. */
+/** PriceEntry.
+ * Хранит текущую цену SKU, время изменения и ревизию записи. Снимки оформленных покупок
+ * хранят свои цены.
+ */
 class PriceEntry {
   public:
     PriceEntry(std::string_view sku, Money unitPrice, Timestamp changedAt, std::int64_t revision);

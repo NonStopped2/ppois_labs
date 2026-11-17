@@ -8,7 +8,9 @@
 
 namespace shop {
 enum class FulfillmentStatus { Created, Picking, Packed, HandedOver, Delivered, Cancelled };
-/** A single complete shipment; picking does not yet consume the stock reservation. */
+/** Fulfillment.
+ * Ведёт подбор, упаковку, передачу и вручение одного заказа. Подбор не списывает резерв.
+ */
 class Fulfillment {
   public:
     Fulfillment(std::string_view id, const Order& order, std::string_view warehouseId);

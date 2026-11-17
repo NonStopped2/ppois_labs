@@ -6,7 +6,9 @@
 
 namespace shop {
 
-/** A tree node; only the catalog can change its position. */
+/** Category.
+ * Описывает узел дерева каталога. Перенос и архивацию согласует ProductCatalog.
+ */
 class Category {
   public:
     Category(std::string_view id, std::string_view name,

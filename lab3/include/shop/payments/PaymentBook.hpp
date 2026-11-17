@@ -44,7 +44,10 @@ struct AttemptAnalysis {
     std::map<PaymentMethod, MethodOutcomes> methods;
 };
 
-/** All entries are terminal documents. Idempotent replays precede phase checks. */
+/** PaymentBook.
+ * Ведёт попытки, платежи, возвраты и индекс операций. Сверяет повтор с исходными
+ * параметрами до нового финансового эффекта.
+ */
 class PaymentBook {
   public:
     AttemptOutcome recordAttempt(std::string_view attemptId, std::string_view paymentId,

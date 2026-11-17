@@ -60,6 +60,7 @@ void Fulfillment::undoPick(std::string_view sku, std::int64_t quantity) {
                                              "Нельзя отменить отсутствующий подбор");
     pickedQuantities_.at(key) -= quantity;
 }
+// Упаковать можно только полностью подобранный заказ.
 void Fulfillment::pack() {
     detail::check<FulfillmentStateException>(status_ == FulfillmentStatus::Picking &&
                                                  requiredQuantities_ == pickedQuantities_,

@@ -9,7 +9,7 @@ ProductCatalog SnapshotCodec::readCatalog(const Json& data) {
     object(data);
     ProductCatalog result;
     const auto& categories = array(data.at("categories"));
-    // Parents precede children only during reconstruction; storage order is arbitrary.
+    // При восстановлении сначала создаём родителей. Порядок записей в JSON произвольный.
     std::set<std::string> remaining;
     for (const auto& saved : categories) {
         const auto id = string(saved.at("id"));
@@ -48,7 +48,7 @@ ProductCatalog SnapshotCodec::readCatalog(const Json& data) {
         }
         result.addProduct(item);
     }
-    // Archived descendants have to close first, just as in normal catalog operations.
+    // Архивируем потомков раньше родителей по тем же правилам, что и в каталоге.
     for (auto position = categories.size(); position > 0; --position) {
         bool changed = false;
         for (const auto& saved : categories) {

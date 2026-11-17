@@ -8,6 +8,10 @@ struct RepeatItem {
     std::int64_t quantity = 0;
     bool available = false;
 };
+/** OrderProcessing.
+ * Согласует оплату, отмену, комплектацию и доставку. Изменяет затронутые реестры одной
+ * подготовленной операцией.
+ */
 class OrderProcessing {
   public:
     explicit OrderProcessing(StoreState& state);

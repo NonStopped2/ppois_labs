@@ -5,6 +5,10 @@
 #include <string_view>
 
 namespace shop {
+/** InspectionResult.
+ * Различает полученное, принятое и пригодное для склада количество. Принятый брак может
+ * возмещаться без пополнения склада.
+ */
 class InspectionResult {
   public:
     InspectionResult(std::string_view sku, std::int64_t receivedQuantity,

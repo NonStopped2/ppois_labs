@@ -25,7 +25,8 @@ void SnapshotCodec::validatePayments(const StoreState& state) {
                     attempt.createdAt() < order->paymentDeadline() &&
                     attempt.createdAt() <= state.now(),
                 "Попытка оплаты вне срока покупки");
-        // Delivery can change between declined attempts, so compare with terms at that timestamp.
+        // После отказа в оплате доставка может измениться. Сравниваем с условиями на момент
+        // попытки.
         Money expected = order->goodsNet();
         auto delivery = std::get<InitialOrderTerms>(order->history().front().payload()).delivery;
         for (const auto& event : order->history()) {
@@ -37,7 +38,7 @@ void SnapshotCodec::validatePayments(const StoreState& state) {
             }
         }
         expected = expected.checkedAdd(delivery.fee);
-        // Equal timestamps do not encode ordering of a decline versus a delivery edit.
+        // По одинаковым отметкам времени нельзя определить порядок отказа и изменения доставки.
         const bool editedAtSameTime = std::any_of(
             order->history().begin(), order->history().end(), [&attempt](const auto& event) {
                 return event.kind() == OrderEventKind::DeliveryChanged &&

@@ -8,7 +8,10 @@
 
 namespace shop {
 
-/** Current prices; old orders keep their own immutable commercial snapshots. */
+/** PriceList.
+ * Владеет текущими ценами. Массовое изменение по категории фиксируется целиком после
+ * проверки всех цен.
+ */
 class PriceList {
   public:
     explicit PriceList(Money minimumUnitPrice = Money(1));

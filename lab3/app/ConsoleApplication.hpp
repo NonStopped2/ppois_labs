@@ -6,6 +6,10 @@
 #include <ostream>
 
 namespace shop::ui {
+/** ConsoleApplication.
+ * Разбирает команды в выбранном режиме и вызывает предметные сервисы. Хранит локальные
+ * контексты предложения и доставки.
+ */
 class ConsoleApplication {
   public:
     ConsoleApplication(StoreState state, std::ostream& output);

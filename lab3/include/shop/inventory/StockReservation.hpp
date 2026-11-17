@@ -6,6 +6,10 @@
 
 namespace shop {
 enum class ReservationStatus { Held, Confirmed, Consumed, Released, Expired };
+/** StockReservation.
+ * Хранит количества заказа и состояние резерва. Изменения следуют допустимым переходам и
+ * порядку времени.
+ */
 class StockReservation {
   public:
     StockReservation(std::string_view id, std::string_view orderId, std::string_view warehouseId,

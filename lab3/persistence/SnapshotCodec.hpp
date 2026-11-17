@@ -6,7 +6,10 @@
 #include <string_view>
 
 namespace shop {
-/** Versioned full snapshots; decode returns a completely validated independent store. */
+/** SnapshotCodec.
+ * Преобразует состояние в JSON и восстанавливает его со сверкой типов, ссылок и
+ * инвариантов.
+ */
 class SnapshotCodec {
   public:
     static std::string encode(const StoreState& state);

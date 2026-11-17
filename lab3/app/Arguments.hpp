@@ -7,7 +7,10 @@
 #include <vector>
 
 namespace shop::ui {
-/** Each handler must consume and finish its arguments before changing domain state. */
+/** Arguments.
+ * Последовательно потребляет параметры. Обработчик проверяет, что использовал все
+ * аргументы, до изменения модели.
+ */
 class Arguments {
   public:
     explicit Arguments(const std::vector<std::string>& tokens);

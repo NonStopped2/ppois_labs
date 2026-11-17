@@ -17,6 +17,7 @@ void OrderBook::add(const Order& entry) {
     customerOrderIndex_.swap(index);
     revision_ = nextRevision;
 }
+// Публикуем новый неизменяемый снимок заказа. Старые выданные снимки ещё доступны читателям.
 void OrderBook::replace(const Order& entry) {
     const auto previous = order(entry.id());
     detail::check<OrderStateException>(

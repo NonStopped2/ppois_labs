@@ -3,6 +3,10 @@
 #include "shop/application/StoreState.hpp"
 
 namespace shop {
+/** ReturnProcessing.
+ * Согласует заявки, осмотры, деньги, товар и лояльность. Частичный возврат опирается на
+ * снимок покупки.
+ */
 class ReturnProcessing {
   public:
     explicit ReturnProcessing(StoreState& state);

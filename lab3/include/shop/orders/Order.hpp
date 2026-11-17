@@ -24,7 +24,10 @@ struct HistoricalOrderState {
     bool operator==(const HistoricalOrderState&) const = default;
 };
 
-/** Local transitions prepare history before changing scalar or value state. */
+/** Order.
+ * Управляет фазами покупки и хранит её коммерческий снимок. История позволяет восстановить
+ * состояние на момент времени.
+ */
 class Order {
   public:
     Order(std::string_view id, const PriceQuote& quote, std::string_view reservationId,

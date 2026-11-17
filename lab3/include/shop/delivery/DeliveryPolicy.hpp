@@ -8,6 +8,10 @@
 #include <vector>
 
 namespace shop {
+/** DeliveryPolicy.
+ * Подбирает допустимые способы доставки и оценивает сроки. Отбор учитывает адрес и
+ * сохранённые данные строк.
+ */
 class DeliveryPolicy {
   public:
     DeliveryPolicy(const std::vector<DeliveryOption>& options, std::int64_t handlingDuration,

@@ -4,6 +4,10 @@
 #include <string_view>
 
 namespace shop {
+/** CartLine.
+ * Хранит SKU, количество и время добавления. Актуальная цена рассчитывается при подготовке
+ * предложения.
+ */
 class CartLine {
   public:
     CartLine(std::string_view sku, std::int64_t quantity, Timestamp addedAt);

@@ -86,6 +86,7 @@ void ProductCatalog::archiveProduct(std::string_view productId) {
     candidate.archive();
     replaceProduct(std::move(candidate));
 }
+// Проверка категории сохраняет возможность загрузить снимок после восстановления товара.
 void ProductCatalog::restoreProductDraft(std::string_view productId) {
     auto candidate = product(productId);
     detail::check<CatalogRuleException>(!category(candidate.categoryId()).archived(),
@@ -137,6 +138,7 @@ void ProductCatalog::moveCategory(std::string_view categoryId,
     revision_ = nextRevision;
 }
 
+// Архивируем родителей после дочерних категорий и товаров, чтобы дерево оставалось согласованным.
 void ProductCatalog::archiveCategory(std::string_view categoryId) {
     const auto candidate = category(categoryId);
     detail::check<CatalogRuleException>(!candidate.archived(), "Категория уже архивирована");
@@ -154,6 +156,7 @@ void ProductCatalog::archiveCategory(std::string_view categoryId) {
     revision_ = nextRevision;
 }
 
+// Изменяем копию каталога. Ошибка в последнем товаре отменяет весь перенос.
 void ProductCatalog::bulkMoveProducts(const std::vector<std::string>& productIds,
                                       std::string_view categoryId) {
     const auto target = category(categoryId);
@@ -172,6 +175,7 @@ void ProductCatalog::bulkMoveProducts(const std::vector<std::string>& productIds
     revision_ = nextRevision;
 }
 
+// Проверяем конфликты при переносе в копии, затем архивируем опустевший источник.
 void ProductCatalog::mergeCategories(std::string_view sourceId, std::string_view targetId) {
     const auto source = category(sourceId);
     const auto target = category(targetId);

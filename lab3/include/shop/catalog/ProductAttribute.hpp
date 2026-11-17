@@ -8,7 +8,10 @@ namespace shop {
 
 enum class AttributeKind { Text, Integer };
 
-/** Schema for one characteristic, shared by all variants of a product. */
+/** ProductAttribute.
+ * Задаёт схему одной характеристики продукта. Проверяет тип, обязательность и допустимые
+ * значения.
+ */
 class ProductAttribute {
   public:
     ProductAttribute(std::string_view name, AttributeKind kind, bool required,

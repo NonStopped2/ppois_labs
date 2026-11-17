@@ -11,7 +11,10 @@
 
 namespace shop {
 class OrderBook;
-/** Coordinates multi-SKU inventory operations with prepare-then-swap semantics. */
+/** Inventory.
+ * Согласует остатки, резервы и приходы. Изменения нескольких SKU фиксирует после полной
+ * проверки.
+ */
 class Inventory {
   public:
     explicit Inventory(Warehouse warehouse);

@@ -4,6 +4,9 @@
 #include <string_view>
 
 namespace shop {
+/** ReceiptLine.
+ * Фиксирует SKU, количество, закупочную цену и партию в документе прихода.
+ */
 class ReceiptLine {
   public:
     ReceiptLine(std::string_view sku, std::int64_t quantity, Money purchaseUnitCost,

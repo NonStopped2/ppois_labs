@@ -9,7 +9,10 @@
 
 namespace shop {
 
-/** Wishes refer to products, not to prices or a pre-reserved SKU. */
+/** Wishlist.
+ * Хранит идентификаторы понравившихся продуктов. Для переноса в корзину покупатель явно
+ * выбирает вариант.
+ */
 class Wishlist {
   public:
     explicit Wishlist(std::string_view customerId);

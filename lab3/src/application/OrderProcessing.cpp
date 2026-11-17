@@ -36,6 +36,7 @@ void assertReservation(const Inventory& inventory, const Order& order, Reservati
 }
 } // namespace
 OrderProcessing::OrderProcessing(StoreState& state) : state_(state) {}
+// Попытка и связанные изменения реестров готовятся вместе со счётчиком идентификаторов.
 AttemptOutcome OrderProcessing::pay(std::string_view actor, std::string_view orderId, Money amount,
                                     PaymentMethod method, bool accepted,
                                     std::string_view failureReason, std::string_view operationId) {
@@ -157,6 +158,7 @@ void OrderProcessing::pack(std::string_view orderId, std::string_view operationI
 void OrderProcessing::reopenPicking(std::string_view orderId, std::string_view operationId) {
     changeFulfillment(orderId, CommandKind::ReopenPicking, "", 0, operationId);
 }
+// При передаче заказа согласуем историю, исполнение и списание резерва.
 void OrderProcessing::dispatch(std::string_view orderId, std::string_view trackingNumber,
                                std::string_view operationId) {
     const auto tracking = detail::text(trackingNumber, "трек-номер");
@@ -181,6 +183,7 @@ void OrderProcessing::dispatch(std::string_view orderId, std::string_view tracki
     recordOperation(change.operations(), operationId, signature);
     change.commit();
 }
+// Получение завершает доставку и увеличивает оборот для лояльности один раз.
 void OrderProcessing::confirmDelivery(std::string_view actor, std::string_view orderId,
                                       std::string_view operationId) {
     const auto signature = command(CommandKind::Deliver, actor, orderId);
@@ -235,6 +238,7 @@ DeliveryTerms OrderProcessing::previewUnpaidDelivery(std::string_view actor,
                                          "Смена доставки создаёт нулевой заказ");
     return {destination, option.id(), fee};
 }
+// Новые условия сравниваются с предложением, которое подтвердил покупатель.
 void OrderProcessing::changeUnpaidDelivery(std::string_view actor, std::string_view orderId,
                                            const DeliveryTerms& acceptedTerms,
                                            std::string_view operationId) {
@@ -268,6 +272,7 @@ std::vector<RepeatItem> OrderProcessing::repeatOrderPlan(std::string_view actor,
     }
     return result;
 }
+// В корзину возвращается доступный выбор. Его цену и доставку рассчитывает новое предложение.
 void OrderProcessing::repeatOrder(std::string_view actor, std::string_view orderId,
                                   const std::vector<std::string>& selectedSkus,
                                   std::string_view operationId) {

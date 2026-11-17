@@ -8,7 +8,10 @@
 #include <vector>
 
 namespace shop {
-/** Immutable shared snapshots keep previously returned orders alive across replacements. */
+/** OrderBook.
+ * Владеет заказами и индексом по покупателям. Старые неизменяемые снимки остаются доступны
+ * после замены заказа.
+ */
 class OrderBook {
   public:
     void add(const Order& order);

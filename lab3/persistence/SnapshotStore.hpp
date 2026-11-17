@@ -4,7 +4,9 @@
 #include <filesystem>
 
 namespace shop {
-/** Explicit files only: no autosave, database, or crash-durability claim. */
+/** SnapshotStore.
+ * Загружает и сохраняет файл снимка. Подменяет состояние только после успешного разбора.
+ */
 class SnapshotStore {
   public:
     static void save(const std::filesystem::path& destination, const StoreState& state);

@@ -18,7 +18,10 @@ struct PackageSnapshot {
     bool operator==(const PackageSnapshot&) const = default;
 };
 
-/** One immutable commercial line of a preview. */
+/** QuoteLine.
+ * Фиксирует состав одной строки предложения, включая цену и распределённую скидку, упаковку и
+ * возможность возврата.
+ */
 class QuoteLine {
   public:
     QuoteLine(const ProductVariant& variant, std::string_view title, std::int64_t quantity,

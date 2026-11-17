@@ -10,7 +10,9 @@
 namespace shop {
 inline constexpr std::int64_t DefaultMaximumCartUnits = 1000;
 
-/** Editable wishes; quantities in a cart do not hold inventory. */
+/** Cart.
+ * Хранит выбор покупателя и код купона. Остатки резервируются при оформлении заказа.
+ */
 class Cart {
   public:
     Cart(std::string_view id, std::string_view customerId);

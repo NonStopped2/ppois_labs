@@ -38,6 +38,7 @@ bool PricingPolicy::preferLoyaltyOnTie() const noexcept {
     return preferLoyaltyOnTie_;
 }
 
+// Распределение по строкам сохраняет общую сумму скидки с точностью до копейки.
 std::vector<Money> PricingPolicy::allocateDiscount(const std::vector<QuoteLine>& lines,
                                                    const std::vector<std::size_t>& eligible,
                                                    Money discount) {
@@ -98,6 +99,7 @@ PriceQuote PricingPolicy::selectDiscount(const std::vector<PriceQuote>& candidat
     return *best;
 }
 
+// Предложение собирается из актуальных данных. Резерв и квота появятся только при оформлении.
 PriceQuote PricingPolicy::makeQuote(const Cart& cart, const Customer& customer,
                                     const Address& destination, std::string_view deliveryOptionId,
                                     const PricingContext& context, Timestamp now) const {

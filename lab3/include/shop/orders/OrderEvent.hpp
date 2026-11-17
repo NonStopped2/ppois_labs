@@ -44,7 +44,10 @@ struct DeliveryChange {
 using OrderEventPayload =
     std::variant<std::monostate, InitialOrderTerms, DeadlineChange, DeliveryChange>;
 
-/** Typed history; human descriptions are never parsed to restore commercial data. */
+/** OrderEvent.
+ * Хранит историю переходов и типизированные данные изменений. Описание предназначено для
+ * отображения.
+ */
 class OrderEvent {
   public:
     OrderEvent(Timestamp timestamp, OrderEventKind kind, std::string_view operationId,

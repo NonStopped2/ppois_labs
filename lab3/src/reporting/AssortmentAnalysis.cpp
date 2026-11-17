@@ -16,7 +16,8 @@ std::vector<AbcEntry> SalesReport::abcAnalysis(std::int64_t aBoundaryBps,
         return left.netRevenue != right.netRevenue ? left.netRevenue > right.netRevenue
                                                    : left.sku < right.sku;
     });
-    // Compare cumulative/total with each boundary using exact division, not overflowing products.
+    // Сравниваем накопленную долю с границей точным делением, чтобы избежать переполнения при
+    // умножении.
     const auto ceiling = [this](std::int64_t bps) {
         const auto [whole, remainder] = deliveredNetGoods_.fractionParts(bps, 10000);
         return whole.checkedAdd(Money(remainder > 0));

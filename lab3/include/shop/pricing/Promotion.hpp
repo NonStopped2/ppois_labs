@@ -13,7 +13,10 @@ namespace shop {
 
 enum class PromotionKind { Percentage, FixedAmount };
 
-/** Promotion eligibility is evaluated before allocating discounts into purchase snapshots. */
+/** Promotion.
+ * Определяет условия акции и строки, к которым применяется скидка. Условия проверяются при
+ * расчёте предложения.
+ */
 class Promotion {
   public:
     Promotion(std::string_view id, std::string_view name, PromotionKind kind, std::int64_t value,

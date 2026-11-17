@@ -35,7 +35,7 @@ enum class CommandKind {
     AmendReturn,
     ExpireReturn
 };
-/** Actual canonical values, not just hashes, protect against operation-ID reuse. */
+/** Храним канонические параметры, чтобы обнаружить повтор ID с другими данными. */
 struct CommandSignature {
     CommandKind kind = CommandKind::PlaceOrder;
     std::string actor;
@@ -55,7 +55,7 @@ struct OperationRecord {
     bool operator==(const OperationRecord&) const = default;
 };
 using OperationJournal = std::map<std::string, OperationRecord>;
-/** Internal commands must not reserve or overwrite caller-selected journal keys. */
+/** Внутренняя команда выбирает свободный ключ журнала и сохраняет записи пользователя. */
 std::string unusedOperationId(const OperationJournal& journal, std::string_view preferred);
 std::optional<OperationResult> replayOperation(const OperationJournal& journal,
                                                std::string_view operationId,

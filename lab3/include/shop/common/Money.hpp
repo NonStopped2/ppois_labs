@@ -7,7 +7,10 @@
 
 namespace shop {
 
-/** BYN amounts in integer kopecks; signed values also represent report balances. */
+/** Money.
+ * Хранит BYN в целых копейках и проверяет переполнение операций. Знаковые суммы нужны для
+ * расчётов и отчётов.
+ */
 class Money {
   public:
     explicit Money(std::int64_t kopecks = 0) noexcept;

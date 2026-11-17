@@ -4,7 +4,10 @@
 #include <string_view>
 
 namespace shop {
-/** Physical and held units always satisfy 0 <= reserved <= onHand. */
+/** StockItem.
+ * Хранит физический и зарезервированный остаток одного SKU. Резерв всегда находится в
+ * пределах физического остатка.
+ */
 class StockItem {
   public:
     explicit StockItem(std::string_view sku, std::int64_t onHand = 0, std::int64_t reserved = 0,

@@ -25,6 +25,7 @@ void PriceList::changePrice(const ProductCatalog& catalog, std::string_view sku,
     revision_ = nextRevision;
 }
 
+// Сначала рассчитываем новые цены для всей категории, затем заменяем текущий список.
 void PriceList::applyCategoryPriceChange(const ProductCatalog& catalog, std::string_view categoryId,
                                          std::int64_t changeBps, Timestamp now) {
     detail::require(changeBps >= -10000 && changeBps <= 10000 && now >= 0,

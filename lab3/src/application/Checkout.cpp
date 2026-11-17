@@ -25,6 +25,8 @@ PriceQuote Checkout::preview(std::string_view actor, const Address& destination,
     return state_.pricingPolicy_.makeQuote(cart, customer, destination, deliveryOptionId,
                                            state_.pricingContext(actor), state_.now());
 }
+// Повтор операции проверяем до повторного расчёта и удержания товара. Новые изменения готовятся
+// вместе.
 std::string Checkout::placeOrder(std::string_view actor, const PriceQuote& acceptedQuote,
                                  std::string_view operationId) {
     const CommandSignature signature{
@@ -57,6 +59,8 @@ std::string Checkout::placeOrder(std::string_view actor, const PriceQuote& accep
     change.commit();
     return id;
 }
+// Истечение освобождает товар и квоту. Технический ключ выбирается без коллизии с командами
+// пользователя.
 std::vector<std::string> Checkout::expireUnpaidOrders() {
     const auto now = state_.now();
     auto overdue = state_.orders_.findOverdueUnpaid(now);

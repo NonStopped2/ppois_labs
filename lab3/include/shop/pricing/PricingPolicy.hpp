@@ -30,7 +30,10 @@ struct PricingContext {
     const ReturnPolicy& returnPolicy;
 };
 
-/** Pure quote calculation: does not reserve inventory or consume coupon quotas. */
+/** PricingPolicy.
+ * Рассчитывает предложение по корзине, ценам, скидкам и доставке. Расчёт не удерживает
+ * товар или квоту купона.
+ */
 class PricingPolicy {
   public:
     explicit PricingPolicy(std::int64_t quoteLifetime = 300,

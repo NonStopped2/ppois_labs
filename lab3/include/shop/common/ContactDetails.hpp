@@ -5,7 +5,9 @@
 
 namespace shop {
 
-/** Contact data, with structural validation rather than external identity checks. */
+/** ContactDetails.
+ * Хранит имя и контакты покупателя. Проверяет структуру данных и нормализует телефон.
+ */
 class ContactDetails {
   public:
     ContactDetails(std::string_view fullName, std::string_view email, std::string_view phone);

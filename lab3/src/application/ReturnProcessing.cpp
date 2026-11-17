@@ -87,6 +87,8 @@ std::string ReturnProcessing::open(std::string_view actor, std::string_view orde
     change.commit();
     return id;
 }
+// Осмотр должен покрыть все заявленные позиции. При отказе выделенные идентификаторы не
+// публикуются.
 std::string ReturnProcessing::inspect(std::string_view requestId,
                                       const std::vector<InspectionResult>& results,
                                       std::string_view operationId) {
@@ -145,6 +147,7 @@ void ReturnProcessing::withdraw(std::string_view actor, std::string_view request
     recordOperation(change.operations(), operationId, signature);
     change.commit();
 }
+// Фиксируем возврат, пополнение склада по пригодным единицам и изменение лояльности вместе.
 Money ReturnProcessing::complete(std::string_view requestId, std::string_view operationId) {
     const auto signature = signatureFor(CommandKind::CompleteReturn, "operator", requestId);
     if (const auto replay = replayOperation(state_.operations_, operationId, signature)) {

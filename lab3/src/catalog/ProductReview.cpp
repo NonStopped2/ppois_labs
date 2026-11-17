@@ -42,6 +42,7 @@ const std::set<std::string>& ProductReview::helpfulVoters() const noexcept {
 bool ProductReview::visible() const noexcept {
     return moderationStatus_.visibility == ReviewVisibility::Published;
 }
+// Отзыв с новым текстом возвращается на модерацию, а прежние голоса сбрасываются.
 void ProductReview::edit(std::string_view actor, int newRating, std::string_view newText) {
     detail::check<ReviewRuleException>(actor == customerId_ && newRating >= 1 && newRating <= 5,
                                        "Чужой отзыв или недопустимая оценка");

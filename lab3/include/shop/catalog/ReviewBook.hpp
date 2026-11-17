@@ -15,9 +15,13 @@ struct RatingSummary {
     std::array<std::int64_t, 5> distribution{};
     std::int64_t count = 0;
     std::int64_t totalScore = 0;
-    /** Exact average numerator/denominator; no fictitious zero rating for an empty set. */
+    /** Средняя оценка хранится точной дробью. У пустой выборки среднего нет. */
     std::optional<std::pair<std::int64_t, std::int64_t>> average() const;
 };
+/** ReviewBook.
+ * Проверяет право на отзыв и ведёт индекс покупатель–продукт. Сводка учитывает
+ * опубликованные подтверждённые отзывы.
+ */
 class ReviewBook {
   public:
     void addVerifiedReview(std::string_view id, const Customer& customer, const Order& order,

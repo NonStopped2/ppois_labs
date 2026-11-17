@@ -4,7 +4,7 @@
 
 namespace shop {
 
-/** Invalid values or arithmetic outside the supported representation. */
+/** Некорректное значение или выход за границы представимых чисел. */
 class InvalidDomainDataException : public ShopException {
   public:
     using ShopException::ShopException;

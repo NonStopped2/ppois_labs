@@ -10,7 +10,10 @@
 
 namespace shop {
 
-/** Purchasable SKU with immutable characteristics and physical package data. */
+/** ProductVariant.
+ * Представляет продаваемый SKU с характеристиками и данными упаковки. По ним считаются
+ * доступность и доставка.
+ */
 class ProductVariant {
   public:
     ProductVariant(std::string_view sku, std::string_view label,

@@ -35,6 +35,7 @@ CouponUsage CouponBook::usageSummary(std::string_view code, std::string_view cus
     return result;
 }
 
+// Удержанная попытка уже занимает часть лимита, чтобы два заказа не использовали одну квоту.
 void CouponBook::reserveUse(std::string_view code, const Customer& customer,
                             const Promotion& promotion, std::string_view orderId, Timestamp now) {
     const auto order = detail::text(orderId, "заказ");
@@ -51,6 +52,7 @@ void CouponBook::reserveUse(std::string_view code, const Customer& customer,
     heldUses_.emplace(order, CouponUse{entry.code(), customer.id(), now, std::nullopt});
 }
 
+// Оплата подтверждает ранее удержанную квоту, поэтому срок акции повторно не проверяется.
 void CouponBook::confirmUse(std::string_view orderId, Timestamp now) {
     const auto order = std::string(orderId);
     auto use = detail::get(heldUses_, orderId);

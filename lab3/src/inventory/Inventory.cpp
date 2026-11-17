@@ -60,6 +60,7 @@ void Inventory::postReceipt(const StockReceipt& receipt, const ProductCatalog& c
     items_.swap(candidateItems);
     postedReceipts_.swap(documents);
 }
+// Меняем остатки на копии. Нехватка одного SKU не оставляет резерв по остальным.
 void Inventory::reserve(std::string_view id, std::string_view orderId,
                         const std::map<std::string, std::int64_t>& quantities, Timestamp now,
                         Timestamp deadline) {
@@ -118,6 +119,7 @@ void Inventory::release(std::string_view id, Timestamp now) {
 void Inventory::expire(std::string_view id, Timestamp now) {
     finish(id, now, ReservationStatus::Expired);
 }
+// При передаче заказа списываем одновременно физический и удержанный остатки.
 void Inventory::consume(std::string_view id, Timestamp now) {
     finish(id, now, ReservationStatus::Consumed);
 }
@@ -129,6 +131,7 @@ void Inventory::restock(const std::map<std::string, std::int64_t>& quantities) {
     }
     items_.swap(candidate);
 }
+// Пересчёт физического остатка должен сохранить уже выданные резервы.
 void Inventory::applyStockCount(std::string_view sku, std::int64_t actual) {
     const auto key = std::string(sku);
     detail::get(items_, key);

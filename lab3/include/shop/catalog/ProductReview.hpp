@@ -12,6 +12,10 @@ struct ModerationStatus {
     std::string reason;
     bool operator==(const ModerationStatus&) const = default;
 };
+/** ProductReview.
+ * Хранит оценку, текст и голоса по подтверждённой покупке. Редактирование сбрасывает голоса
+ * и прежнюю модерацию.
+ */
 class ProductReview {
   public:
     ProductReview(std::string_view id, std::string_view customerId, std::string_view productId,

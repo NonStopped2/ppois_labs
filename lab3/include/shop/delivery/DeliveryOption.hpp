@@ -7,6 +7,9 @@
 #include <vector>
 
 namespace shop {
+/** DeliveryOption.
+ * Задаёт ограничения способа доставки по адресу и упаковке, а также правила расчёта платы.
+ */
 class DeliveryOption {
   public:
     DeliveryOption(std::string_view id, std::string_view name, std::set<std::string> postalPrefixes,

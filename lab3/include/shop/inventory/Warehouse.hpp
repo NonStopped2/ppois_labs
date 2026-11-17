@@ -4,6 +4,9 @@
 #include <string_view>
 
 namespace shop {
+/** Warehouse.
+ * Описывает склад и его режим приёма поставок. Количество товара учитывает Inventory.
+ */
 class Warehouse {
   public:
     Warehouse(std::string_view id, std::string_view name, Address address,

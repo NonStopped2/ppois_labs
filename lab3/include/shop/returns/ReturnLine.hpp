@@ -10,6 +10,10 @@ struct ReturnSelection {
     ReturnReason reason = ReturnReason::ChangedMind;
     bool operator==(const ReturnSelection&) const = default;
 };
+/** ReturnLine.
+ * Фиксирует запрошенные единицы, причину и верхнюю границу возмещения. Сумма основана на
+ * стоимости исходной покупки.
+ */
 class ReturnLine {
   public:
     ReturnLine(const OrderLine& purchased, std::int64_t requestedQuantity,

@@ -8,7 +8,10 @@
 
 namespace shop {
 
-/** Delivered goods turnover net of completed returns, with replay protection. */
+/** LoyaltyAccount.
+ * Учитывает сумму полученных покупок за вычетом оформленных возвратов. Повтор операции не
+ * меняет оборот.
+ */
 class LoyaltyAccount {
   public:
     explicit LoyaltyAccount(std::string_view customerId);

@@ -8,7 +8,10 @@
 
 namespace shop {
 
-/** Addresses are owned values; deleting a default selects the first remaining label. */
+/** AddressBook.
+ * Хранит именованные адреса покупателя. При удалении основного адреса выбирает первый
+ * оставшийся.
+ */
 class AddressBook {
   public:
     explicit AddressBook(std::string_view customerId);

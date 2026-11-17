@@ -74,7 +74,10 @@ struct PromotionStatistics {
     Money returnedGoods;
 };
 
-/** Cash-flow periods and delivered-order cohorts deliberately have different meanings. */
+/** SalesReport.
+ * Строит денежные отчёты и показатели заказов по документам магазина. Денежные события и
+ * когорты доставок используют разные даты.
+ */
 class SalesReport {
   public:
     static SalesReport buildFinancialSummary(const TimeWindow& period,

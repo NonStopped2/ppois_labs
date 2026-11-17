@@ -7,7 +7,10 @@
 #include <string_view>
 
 namespace shop {
-/** Positive financial document; zero-value item returns have an order event instead. */
+/** Refund.
+ * Фиксирует положительный денежный возврат по платежу. При возврате товара указывает заявку.
+ * Возврат товара на нулевую сумму отражается в истории заказа.
+ */
 class Refund {
   public:
     Refund(std::string_view id, std::string_view operationId, std::string_view paymentId,

@@ -5,6 +5,10 @@
 
 namespace shop {
 class ReturnRequest;
+/** ReturnInspection.
+ * Фиксирует осмотр полученного товара. После завершения набор результатов больше не
+ * редактируется.
+ */
 class ReturnInspection {
   public:
     ReturnInspection(std::string_view id, const ReturnRequest& request, Timestamp receivedAt);

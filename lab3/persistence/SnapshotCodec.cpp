@@ -151,7 +151,7 @@ StoreState SnapshotCodec::readState(const Json& data) {
     }
     state.nextSequence_ = integer(data.at("next_sequence"));
     validate(state);
-    // This also rejects unknown fields, changed caches and silently normalized identifiers.
+    // Обратное кодирование выявляет неизвестные поля, неверные кеши и изменённые идентификаторы.
     require(writeState(state) == data, "Снимок содержит неизвестные или противоречивые поля");
     return state;
 }
@@ -173,7 +173,7 @@ StoreState SnapshotCodec::decode(std::string_view document) {
     try {
         require(!document.empty() && document.size() <= MaximumSnapshotBytes,
                 "Недопустимый размер JSON-снимка");
-        // The JSON lexer treats a raw NUL as end of input.
+        // JSON-парсер принимает необработанный нулевой байт за конец ввода.
         require(document.find('\0') == std::string_view::npos, "Нулевой байт в JSON-снимке");
         std::vector<std::set<std::string>> objects;
         const auto callback = [&objects](int depth, Json::parse_event_t event, Json& parsed) {

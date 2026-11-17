@@ -3,6 +3,10 @@
 #include "shop/application/StoreState.hpp"
 
 namespace shop {
+/** Checkout.
+ * Согласует оформление, корзину, купоны и склад через StoreState. Ошибка оставляет
+ * участвующие реестры без частичных изменений.
+ */
 class Checkout {
   public:
     explicit Checkout(StoreState& state);

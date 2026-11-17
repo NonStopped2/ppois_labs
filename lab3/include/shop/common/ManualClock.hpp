@@ -4,7 +4,10 @@
 
 namespace shop {
 
-/** Deterministic time source; loading constructs a clock at the saved timestamp. */
+/** ManualClock.
+ * Хранит текущее учебное время. Проверяет неотрицательность и переполнение при переводе
+ * часов.
+ */
 class ManualClock {
   public:
     explicit ManualClock(Timestamp initial = 1767225600);

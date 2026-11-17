@@ -12,7 +12,9 @@
 #include "shop/returns/ReturnRequest.hpp"
 
 namespace shop {
-/** Technical owner, not another class added to the domain counter. */
+/** StoreState.
+ * Владеет реестрами магазина. Публикует согласованные изменения и выдаёт снимки для чтения.
+ */
 class StoreState {
   public:
     StoreState(Inventory inventory, DeliveryPolicy delivery, Timestamp initialTime = 0,

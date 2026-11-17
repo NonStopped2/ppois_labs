@@ -42,6 +42,7 @@ void ReturnInspection::recordResult(const InspectionResult& result, const Return
     detail::check<DuplicateEntityException>(results_.emplace(result.sku(), result).second,
                                             "Повторная строка осмотра");
 }
+// После завершения фиксируем результаты для дальнейшего расчёта возврата.
 void ReturnInspection::finalize(const ReturnRequest& request) {
     detail::check<ReturnRuleException>(!finalized_ && request.id() == requestId_ &&
                                            results_.size() == request.lines().size(),

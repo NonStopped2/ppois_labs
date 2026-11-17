@@ -15,7 +15,10 @@ enum class ReturnReason { ChangedMind, Defective, WrongItem };
 enum class ItemCondition { Unopened, Opened, Defective, Incomplete };
 inline constexpr std::int64_t DefaultReturnWindowSeconds = 14 * 24 * 60 * 60;
 
-/** This value is frozen into an offer and then into the purchase. */
+/** ReturnPolicy.
+ * Определяет сроки, причины и условия возврата. Заказ хранит снимок правил на момент
+ * покупки.
+ */
 class ReturnPolicy {
   public:
     explicit ReturnPolicy(std::int64_t returnWindow = DefaultReturnWindowSeconds,

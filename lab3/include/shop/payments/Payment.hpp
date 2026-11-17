@@ -6,6 +6,10 @@
 #include <set>
 
 namespace shop {
+/** Payment.
+ * Фиксирует проведённую оплату и связанные возвраты. Возврат ограничен ещё доступной частью
+ * оплаты.
+ */
 class Payment {
   public:
     Payment(std::string_view id, const PaymentAttempt& attempt);

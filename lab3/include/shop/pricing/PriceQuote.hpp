@@ -16,7 +16,10 @@ struct DiscountSource {
     bool operator==(const DiscountSource&) const = default;
 };
 
-/** Immutable terms accepted by a buyer; no inventory is held by an offer. */
+/** PriceQuote.
+ * Фиксирует коммерческие условия предложения и срок их действия. При оформлении условия
+ * сверяются повторно.
+ */
 class PriceQuote {
   public:
     PriceQuote(std::string_view customerId, std::vector<QuoteLine> lines, Address deliveryAddress,

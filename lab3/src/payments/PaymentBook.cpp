@@ -13,6 +13,7 @@ void PaymentBook::swap(PaymentBook& other) noexcept {
     refunds_.swap(other.refunds_);
     operationIndex_.swap(other.operationIndex_);
 }
+// Тот же идентификатор операции даёт записанный исход только при совпадении параметров.
 AttemptOutcome PaymentBook::recordAttempt(std::string_view attemptId, std::string_view paymentId,
                                           const Order& order, Money amount, PaymentMethod method,
                                           Timestamp now, bool accepted,
@@ -60,6 +61,7 @@ AttemptOutcome PaymentBook::recordAttempt(std::string_view attemptId, std::strin
     swap(candidate);
     return result;
 }
+// Сверяем параметры повтора и остаток оплаты до фиксации возврата.
 Refund PaymentBook::refund(std::string_view id, std::string_view operationId,
                            std::string_view paymentId, std::optional<std::string> returnRequestId,
                            Money amount, Timestamp now) {
