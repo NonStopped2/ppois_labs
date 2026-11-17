@@ -1,10 +1,8 @@
 #pragma once
 
-#include <cstdint>
+#include "shop/common/Timestamp.hpp"
 
 namespace shop {
-
-using Timestamp = std::int64_t;
 
 /** Half-open interval [startsAt, endsAt) in seconds of the educational clock. */
 class TimeWindow {
@@ -19,18 +17,6 @@ class TimeWindow {
   private:
     Timestamp startsAt_;
     Timestamp endsAt_;
-};
-
-/** Deterministic time source; loading constructs a clock at the saved timestamp. */
-class ManualClock {
-  public:
-    explicit ManualClock(Timestamp initial = 1767225600);
-    Timestamp now() const noexcept;
-    void advance(std::int64_t seconds);
-    bool operator==(const ManualClock&) const = default;
-
-  private:
-    Timestamp now_;
 };
 
 } // namespace shop

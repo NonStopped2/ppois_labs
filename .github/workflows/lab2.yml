@@ -59,7 +59,7 @@ jobs:
       - name: Configure sanitizer tests
         run: >-
           cmake -S . -B build/test -DCMAKE_BUILD_TYPE=Debug
-          -DLAB2_ENABLE_SANITIZERS=ON -DBUILD_SHARED_LIBS=OFF
+          -DLAB2_ENABLE_SANITIZERS=ON -DBUILD_SHARED_LIBS=OFF -DBUILD_LAB3=OFF
       - name: Build tests and application
         run: cmake --build build/test --target post_core_tests post_ui_tests post_cli --parallel 4
       - name: Run domain, UI, CLI and tooling tests
@@ -67,7 +67,7 @@ jobs:
       - name: Configure standalone Release without tests
         run: >-
           cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
-          -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF
+          -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DBUILD_LAB3=OFF
       - name: Build standalone application
         run: cmake --build build/release --target post_cli --parallel 4
       - name: Install, relocate, package and test extracted archive
@@ -105,7 +105,7 @@ jobs:
       - name: Configure LLVM coverage
         run: >-
           cmake -S . -B build/coverage -DCMAKE_BUILD_TYPE=Debug
-          -DLAB2_ENABLE_COVERAGE=ON -DCMAKE_CXX_COMPILER=clang++-18
+          -DLAB2_ENABLE_COVERAGE=ON -DCMAKE_CXX_COMPILER=clang++-18 -DBUILD_LAB3=OFF
           -DBUILD_SHARED_LIBS=OFF
       - name: Build instrumented tests and application
         run: cmake --build build/coverage --target post_core_tests post_ui_tests post_cli --parallel 4

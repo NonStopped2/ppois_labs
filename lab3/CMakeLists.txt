@@ -2,6 +2,7 @@ add_library(shop_core
     src/common/Money.cpp
     src/common/Address.cpp
     src/common/ContactDetails.cpp
+    src/common/ManualClock.cpp
     src/common/TimeWindow.cpp
     src/catalog/Category.cpp
     src/catalog/ProductAttribute.cpp
@@ -82,7 +83,7 @@ add_library(shop_persistence
 target_include_directories(shop_persistence PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/persistence")
 target_link_libraries(shop_persistence PUBLIC shop_core nlohmann_json::nlohmann_json)
 add_library(shop_ui
-    app/InputReader.cpp app/DemoData.cpp app/ConsoleApplication.cpp app/Formatting.cpp app/Help.cpp app/RunProgram.cpp
+    app/Arguments.cpp app/InputReader.cpp app/DemoData.cpp app/ConsoleApplication.cpp app/Formatting.cpp app/Help.cpp app/RunProgram.cpp
     app/commands/CatalogCommands.cpp app/commands/CustomerCommands.cpp app/commands/OrderCommands.cpp
     app/commands/ReturnCommands.cpp app/commands/ReviewCommands.cpp app/commands/ReportCommands.cpp)
 target_include_directories(shop_ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/app")

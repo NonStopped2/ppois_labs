@@ -173,6 +173,8 @@ StoreState SnapshotCodec::decode(std::string_view document) {
     try {
         require(!document.empty() && document.size() <= MaximumSnapshotBytes,
                 "Недопустимый размер JSON-снимка");
+        // The JSON lexer treats a raw NUL as end of input.
+        require(document.find('\0') == std::string_view::npos, "Нулевой байт в JSON-снимке");
         std::vector<std::set<std::string>> objects;
         const auto callback = [&objects](int depth, Json::parse_event_t event, Json& parsed) {
             require(depth <= 128, "Слишком большая вложенность JSON");

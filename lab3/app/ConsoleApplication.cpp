@@ -1,4 +1,6 @@
 #include "ConsoleApplication.hpp"
+#include "InputError.hpp"
+#include "InputReader.hpp"
 #include "SnapshotStore.hpp"
 #include "shop/application/Checkout.hpp"
 #include "shop/application/ReturnProcessing.hpp"

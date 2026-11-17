@@ -186,7 +186,7 @@ upload-artifact v4, download-artifact v4. Обновление их версий
 
 ```bash
 python3 lab2/tools/quality.py
-cmake -S . -B build/lab2-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF
+cmake -S . -B build/lab2-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DBUILD_LAB3=OFF
 cmake --build build/lab2-release --target post_cli --parallel 4
 python3 lab2/tools/package.py --build-dir build/lab2-release --output-dir build/lab2-packages
 cmake --build build --target lab2_docs
@@ -195,7 +195,7 @@ python3 lab2/tools/package.py --build-dir build --output-dir build/lab2-packages
 
 Для проверки YAML локально можно использовать `actionlint .github/workflows/lab2.yml`.
 Генерация `lab2_docs` требует установленного Doxygen **на момент конфигурации CMake**;
-если он установлен позже, повторите `cmake -S . -B build`. Обычная сборка приложения
+если он установлен позже, повторите `cmake -S . -B build -DBUILD_LAB3=OFF`. Обычная сборка приложения
 Doxygen не требует. Пути инструментов качества можно задать через
 `--clang-format`, `--cppcheck`, `--cxx` или `CLANG_FORMAT`, `CPPCHECK`, `CXX`.
 

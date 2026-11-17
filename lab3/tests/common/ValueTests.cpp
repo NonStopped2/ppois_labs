@@ -1,6 +1,7 @@
 #include "shop/common/Address.hpp"
 #include "shop/common/ContactDetails.hpp"
 #include "shop/common/InvalidDomainDataException.hpp"
+#include "shop/common/ManualClock.hpp"
 #include "shop/common/Money.hpp"
 #include "shop/common/TimeWindow.hpp"
 #include "shop/common/Validation.hpp"

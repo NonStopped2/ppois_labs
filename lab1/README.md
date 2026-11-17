@@ -9,7 +9,7 @@
 Команды выполняются **из корня репозитория**, не из `lab1`:
 
 ```bash
-cmake -S . -B build
+cmake -S . -B build -DBUILD_LAB3=OFF
 cmake --build build --parallel 4
 ctest --test-dir build --output-on-failure
 ```
@@ -19,7 +19,7 @@ ctest --test-dir build --output-on-failure
 SHA-256. Для сборки только приложений можно отключить эту сетевую зависимость:
 
 ```bash
-cmake -S . -B build/apps -DBUILD_TESTING=OFF
+cmake -S . -B build/apps -DBUILD_TESTING=OFF -DBUILD_LAB3=OFF
 cmake --build build/apps --parallel 4
 ```
 
@@ -163,7 +163,7 @@ CLI отвергает лишние данные после объекта в ф
 Нужны Clang/AppleClang и соответствующие `llvm-cov`, `llvm-profdata`:
 
 ```bash
-cmake -S . -B build/coverage -DENABLE_COVERAGE=ON -DCMAKE_CXX_COMPILER=clang++
+cmake -S . -B build/coverage -DENABLE_COVERAGE=ON -DCMAKE_CXX_COMPILER=clang++ -DBUILD_LAB3=OFF
 cmake --build build/coverage --parallel 4
 python3 tools/coverage.py --build-dir build/coverage
 python3 tools/coverage.py --build-dir build/coverage --unit-only
@@ -189,7 +189,7 @@ python3 tools/coverage.py --build-dir build/coverage --unit-only
 ## Документация и качество
 
 ```bash
-cmake -S . -B build
+cmake -S . -B build -DBUILD_LAB3=OFF
 cmake --build build --target docs
 python3 tools/quality.py
 ```

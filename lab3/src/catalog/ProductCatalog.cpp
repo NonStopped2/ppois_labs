@@ -88,6 +88,8 @@ void ProductCatalog::archiveProduct(std::string_view productId) {
 }
 void ProductCatalog::restoreProductDraft(std::string_view productId) {
     auto candidate = product(productId);
+    detail::check<CatalogRuleException>(!category(candidate.categoryId()).archived(),
+                                        "Категория архивирована");
     candidate.restoreDraft();
     replaceProduct(std::move(candidate));
 }

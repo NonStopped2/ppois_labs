@@ -119,6 +119,16 @@ TEST_CASE("Catalog owns products enforces unique SKU and filters published varia
     REQUIRE(catalog.product("shirt").status() == ProductStatus::Draft);
 }
 
+TEST_CASE("An archived category prevents restoring its products without changing the catalog") {
+    auto catalog = test::catalog();
+    catalog.archiveProduct("shirt");
+    catalog.archiveCategory("clothes");
+    const auto before = catalog;
+
+    REQUIRE_THROWS_AS(catalog.restoreProductDraft("shirt"), CatalogRuleException);
+    REQUIRE(catalog == before);
+}
+
 TEST_CASE("Category moves reject cycles conflicts and unavailable parents atomically") {
     auto catalog = test::catalog();
     catalog.addCategory(Category("child", "Детская", "clothes"));

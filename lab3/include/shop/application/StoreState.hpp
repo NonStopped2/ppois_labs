@@ -2,6 +2,7 @@
 
 #include "shop/application/OperationRecord.hpp"
 #include "shop/catalog/ReviewBook.hpp"
+#include "shop/common/ManualClock.hpp"
 #include "shop/customers/AddressBook.hpp"
 #include "shop/delivery/Fulfillment.hpp"
 #include "shop/orders/OrderBook.hpp"

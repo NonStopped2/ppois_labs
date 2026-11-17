@@ -1,5 +1,7 @@
 #include "ConsoleApplication.hpp"
 #include "DemoData.hpp"
+#include "InputError.hpp"
+#include "InputReader.hpp"
 #include "SnapshotCodec.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>

@@ -1,4 +1,5 @@
 #include "../ConsoleApplication.hpp"
+#include "InputError.hpp"
 
 namespace shop::ui {
 void ConsoleApplication::reviewCommands(Arguments& args) {

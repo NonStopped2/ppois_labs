@@ -1,6 +1,6 @@
 #pragma once
 
-#include "InputReader.hpp"
+#include "Arguments.hpp"
 #include "shop/application/StoreState.hpp"
 #include <istream>
 #include <ostream>

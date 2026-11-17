@@ -5,7 +5,7 @@
 Из корня репозитория:
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_LAB3=OFF
 cmake --build build --target post_cli post_core_tests post_ui_tests --parallel 4
 ./build/lab2/post_cli --help
 ./build/lab2/post_cli
@@ -195,7 +195,7 @@ Python ≥3.9 нужен для вспомогательных проверок,
 CLI-тесты не подменяют C++ unit-тесты. Покрытие измеряется отдельно:
 
 ```bash
-cmake -S . -B build/lab2-coverage -DCMAKE_BUILD_TYPE=Debug -DLAB2_ENABLE_COVERAGE=ON
+cmake -S . -B build/lab2-coverage -DCMAKE_BUILD_TYPE=Debug -DLAB2_ENABLE_COVERAGE=ON -DBUILD_LAB3=OFF
 cmake --build build/lab2-coverage --target post_core_tests post_ui_tests post_cli --parallel 4
 python3 lab2/tools/coverage.py --build-dir build/lab2-coverage
 python3 lab2/tools/coverage.py --build-dir build/lab2-coverage --with-ui

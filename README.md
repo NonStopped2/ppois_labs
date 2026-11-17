@@ -76,7 +76,7 @@ python3 lab2/tools/package.py --build-dir build/lab2-release --output-dir build/
 `llvm-cov` / `llvm-profdata`:
 
 ```bash
-cmake -S . -B build/lab2-coverage -DCMAKE_BUILD_TYPE=Debug -DLAB2_ENABLE_COVERAGE=ON
+cmake -S . -B build/lab2-coverage -DCMAKE_BUILD_TYPE=Debug -DLAB2_ENABLE_COVERAGE=ON -DBUILD_LAB3=OFF
 cmake --build build/lab2-coverage --target post_core_tests post_ui_tests post_cli --parallel 4
 python3 lab2/tools/coverage.py --build-dir build/lab2-coverage
 python3 lab2/tools/coverage.py --build-dir build/lab2-coverage --with-ui

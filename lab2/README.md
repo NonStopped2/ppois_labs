@@ -105,7 +105,7 @@ Catch2 v3.8.1 загружается автоматически с провер�
 сборке тестов нужен доступ к сети.
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_LAB3=OFF
 cmake --build build --target post_cli post_core_tests post_ui_tests --parallel 4
 ctest --test-dir build -L '^lab2($|-)' --output-on-failure
 ./build/lab2/post_cli --demo
@@ -122,7 +122,7 @@ ctest --test-dir build -L '^lab2($|-)' --output-on-failure
 и Python ≥3.9 без сторонних Python-пакетов:
 
 ```bash
-cmake -S . -B build/lab2-coverage -DCMAKE_BUILD_TYPE=Debug -DLAB2_ENABLE_COVERAGE=ON
+cmake -S . -B build/lab2-coverage -DCMAKE_BUILD_TYPE=Debug -DLAB2_ENABLE_COVERAGE=ON -DBUILD_LAB3=OFF
 cmake --build build/lab2-coverage --target post_core_tests post_ui_tests post_cli --parallel 4
 python3 lab2/tools/coverage.py --build-dir build/lab2-coverage
 python3 lab2/tools/coverage.py --build-dir build/lab2-coverage --with-ui
@@ -141,7 +141,7 @@ Catch2, стандартная библиотека и lab1 не входят в
 Проверка с санитайзерами выполняется в отдельной сборке:
 
 ```bash
-cmake -S . -B build/lab2-sanitized -DCMAKE_BUILD_TYPE=Debug -DLAB2_ENABLE_SANITIZERS=ON
+cmake -S . -B build/lab2-sanitized -DCMAKE_BUILD_TYPE=Debug -DLAB2_ENABLE_SANITIZERS=ON -DBUILD_LAB3=OFF
 cmake --build build/lab2-sanitized --target post_core_tests post_ui_tests post_cli --parallel 4
 ctest --test-dir build/lab2-sanitized -L '^lab2($|-)' --output-on-failure
 ```
@@ -1507,7 +1507,7 @@ merge, squash, удаления и переименования во време�
 
 ```bash
 python3 lab2/tools/quality.py
-cmake -S . -B build/lab2-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF
+cmake -S . -B build/lab2-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DBUILD_LAB3=OFF
 cmake --build build/lab2-release --target post_cli --parallel 4
 python3 lab2/tools/package.py --build-dir build/lab2-release --output-dir build/lab2-packages
 ```

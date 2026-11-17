@@ -176,6 +176,12 @@ TEST_CASE("File snapshots replace atomically and failed loads or renames retain 
     }
     REQUIRE_THROWS_AS(SnapshotStore::load(file, restored), SnapshotException);
     REQUIRE(restored == before);
+    {
+        std::ofstream broken(file, std::ios::binary);
+        broken << SnapshotCodec::encode(state) << '\0' << "trailing data";
+    }
+    REQUIRE_THROWS_AS(SnapshotStore::load(file, restored), SnapshotException);
+    REQUIRE(restored == before);
     REQUIRE_THROWS_AS(SnapshotStore::load(directory.path / "missing.json", restored),
                       SnapshotException);
     REQUIRE(restored == before);

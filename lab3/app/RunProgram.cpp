@@ -1,5 +1,6 @@
 #include "ConsoleApplication.hpp"
 #include "DemoData.hpp"
+#include "InputError.hpp"
 #include "SnapshotStore.hpp"
 #include <fstream>
 #include <sstream>

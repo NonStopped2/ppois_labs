@@ -1,4 +1,5 @@
 #include "../ConsoleApplication.hpp"
+#include "InputError.hpp"
 #include <optional>
 
 namespace shop::ui {
