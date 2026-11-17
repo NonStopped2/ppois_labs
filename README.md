@@ -6,16 +6,16 @@
 | --- | --- |
 | [lab1](lab1/README.md) | Кубик Рубика и машина Поста |
 | [lab2](lab2/README.md) | Почта: оформление, оплата, хранение, сортировка, перевозка, выдача и курьерская доставка отправлений |
-| [lab3](lab3/README.md) | Интернет-магазин, ещё не реализован |
+| [lab3](lab3/README.md) | Интернет-магазин: каталог, цены, купоны, склад, покупки, доставка, возвраты, отзывы, отчёты и JSON-снимки |
 | [lab4](lab4/README.md) | Следующая работа, ещё не реализована |
 
-В этой версии объединены реализации lab1 и lab2. Наличие реализации, успешного
+В этой версии объединены реализации lab1, lab2 и lab3. Наличие реализации, успешного
 CI или релиза не означает прохождения защиты и принятия работы преподавателем.
 
 ## Быстрый старт
 
 Нужны CMake ≥3.20, компилятор C++20 и Python ≥3.9 для вспомогательных проверок.
-Catch2 v3.8.1 загружается CMake автоматически с проверкой SHA-256;
+Catch2 v3.8.1 и nlohmann/json v3.12.0 для lab3 загружаются CMake с проверкой SHA-256;
 при первой сборке тестов нужен доступ к сети.
 
 Команды выполняются **из корня репозитория**:
@@ -27,9 +27,10 @@ ctest --test-dir build --output-on-failure
 ./build/lab1/rubiks_cube
 ./build/lab1/post_machine lab1/examples/post_increment.txt -log
 ./build/lab2/post_cli --demo
+./build/lab3/shop_cli --demo
 ```
 
-`--demo` добавляет примеры клиентов и отправлений. Без этого флага приложение
+У `post_cli` флаг `--demo` добавляет примеры клиентов и отправлений. Без него приложение
 начинает работу с пустыми пользовательскими данными. Справка:
 
 ```bash
@@ -39,7 +40,7 @@ ctest --test-dir build --output-on-failure
 Для сборки только приложения, без Python и загрузки Catch2:
 
 ```bash
-cmake -S . -B build/lab2-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+cmake -S . -B build/lab2-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_LAB3=OFF
 cmake --build build/lab2-release --target post_cli --parallel 4
 ./build/lab2-release/lab2/post_cli --demo
 ```
@@ -52,6 +53,11 @@ cmake --build build/lab2-release --target post_cli --parallel 4
 - **[lab2/CLI.md](lab2/CLI.md)** — меню, команды и демонстрационные сценарии.
 - **[lab2/BEHAVIORS.md](lab2/BEHAVIORS.md)** — обоснование подсчёта содержательных поведений.
 - **[lab2/CI.md](lab2/CI.md)** — сборка, автоматические проверки, пакеты и выпуск.
+- **[lab3/README.md](lab3/README.md)** — интернет-магазин и инструкции сборки.
+- **[lab3/docs/CLI.md](lab3/docs/CLI.md)** — команды, роли и воспроизводимые сценарии.
+- **[lab3/docs/BEHAVIORS.md](lab3/docs/BEHAVIORS.md)** — контракты и типизированные связи.
+- **[lab3/docs/SNAPSHOTS.md](lab3/docs/SNAPSHOTS.md)** — полное сохранение/восстановление.
+- **[lab3/docs/CI.md](lab3/docs/CI.md)** — отдельные проверки и пакеты lab3.
 
 Основные команды:
 
@@ -70,7 +76,7 @@ python3 lab2/tools/package.py --build-dir build/lab2-release --output-dir build/
 `llvm-cov` / `llvm-profdata`:
 
 ```bash
-cmake -S . -B build/lab2-coverage -DCMAKE_BUILD_TYPE=Debug -DLAB2_ENABLE_COVERAGE=ON
+cmake -S . -B build/lab2-coverage -DCMAKE_BUILD_TYPE=Debug -DLAB2_ENABLE_COVERAGE=ON -DBUILD_LAB3=OFF
 cmake --build build/lab2-coverage --target post_core_tests post_ui_tests post_cli --parallel 4
 python3 lab2/tools/coverage.py --build-dir build/lab2-coverage
 python3 lab2/tools/coverage.py --build-dir build/lab2-coverage --with-ui

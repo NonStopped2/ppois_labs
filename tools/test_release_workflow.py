@@ -28,9 +28,9 @@ def shell_step(workflow, name):
 class ReleaseWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.workflows = sorted((ROOT / ".github/workflows").glob("lab[12].yml"))
-        if not cls.workflows:
-            raise AssertionError("No laboratory workflows found")
+        cls.workflows = sorted((ROOT / ".github/workflows").glob("lab[123].yml"))
+        if {path.stem for path in cls.workflows} != {"lab1", "lab2", "lab3"}:
+            raise AssertionError("Expected release workflows for lab1, lab2 and lab3")
 
     def select_tag(self, workflow, ref, ref_name, sha=SHA):
         with tempfile.TemporaryDirectory() as directory:
@@ -92,7 +92,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 self.assertIn("EVENT_NAME: ${{ github.event_name }}", scope)
                 self.assertIn("RELEASE_REF: ${{ github.ref }}", scope)
                 self.assertIn("run: python3 tools/release_changes.py", scope)
-                for lab in ("lab1", "lab2"):
+                for lab in {"lab1", "lab2", workflow.stem}:
                     self.assertIn(f"{lab}: ${{{{ steps.scope.outputs.{lab} }}}}", scope)
                 self.assertNotRegex(scope, r"(?m)^    if:")
                 self.assertNotRegex(text, r"(?m)^    paths(?:-ignore)?:")
@@ -142,7 +142,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 self.assertNotIn("--draft", arguments)
                 self.assertNotIn("--verify-tag", arguments)
                 self.assertEqual(sum(arg.endswith(".tar.gz") for arg in arguments), 3)
-                self.assertEqual(sum(arg.endswith(".sha256") for arg in arguments), 3 if workflow.stem == "lab2" else 0)
+                self.assertEqual(sum(arg.endswith(".sha256") for arg in arguments), 0 if workflow.stem == "lab1" else 3)
 
     def test_manual_publication_preserves_existing_tag_mode(self):
         for workflow in self.workflows:
@@ -151,7 +151,32 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 arguments = self.publish_arguments(workflow, f"refs/tags/{tag}", tag)
                 self.assertIn("--verify-tag", arguments)
                 self.assertNotIn("--target", arguments)
-                self.assertEqual("--prerelease" in arguments, workflow.stem == "lab2")
+                self.assertEqual("--prerelease" in arguments, workflow.stem != "lab1")
+
+    def test_store_publication_uses_only_its_release_artifacts_and_checksums(self):
+        workflow = ROOT / ".github/workflows/lab3.yml"
+        text = workflow.read_text()
+        self.assertIn("    tags: ['lab3-v*']", text)
+        release = text.split("\n  release:\n", 1)[1]
+        self.assertIn("pattern: lab3-release-*", release)
+        self.assertIn("merge-multiple: true", release)
+        self.assertIn("contents: write", release)
+        verify = shell_step(workflow, "Verify release assets")
+        for target in ("linux-x86_64", "macos-arm64", "docs"):
+            self.assertIn(f"test -f ppois-lab3-{target}.tar.gz", verify)
+        self.assertIn('sha256sum --check "$archive.sha256"', verify)
+        self.assertNotIn("always()", release)
+
+    def test_published_store_linux_package_is_downloaded_and_executed_after_release(self):
+        text = (ROOT / ".github/workflows/lab3.yml").read_text()
+        release, verify = text.split("\n  verify_published:\n", 1)
+        self.assertIn("tag: ${{ steps.release_tag.outputs.tag }}", release)
+        self.assertIn("    needs: [release]", verify)
+        self.assertIn("runs-on: ubuntu-24.04", verify)
+        self.assertIn("RELEASE_TAG: ${{ needs.release.outputs.tag }}", verify)
+        self.assertIn('gh release download "$RELEASE_TAG"', verify)
+        self.assertIn("--verify-archive downloaded/ppois-lab3-linux-x86_64.tar.gz", verify)
+        self.assertNotIn("download-artifact", verify)
 
 
 if __name__ == "__main__":

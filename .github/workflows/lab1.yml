@@ -40,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-latest]
+        os: [ubuntu-24.04, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -50,7 +50,7 @@ jobs:
       - name: Configure Release
         env:
           MACOSX_DEPLOYMENT_TARGET: '14.0'
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_LAB3=OFF
       - name: Build
         run: cmake --build build --parallel 4
       - name: Test
@@ -85,7 +85,7 @@ jobs:
       - name: Configure coverage
         run: >-
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-          -DENABLE_COVERAGE=ON -DCMAKE_CXX_COMPILER=clang++-18
+          -DENABLE_COVERAGE=ON -DCMAKE_CXX_COMPILER=clang++-18 -DBUILD_LAB3=OFF
       - name: Build
         run: cmake --build build --parallel 4
       - name: Test and enforce coverage above 90 percent

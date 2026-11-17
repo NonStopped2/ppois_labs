@@ -1,0 +1,25 @@
+PROJECT_NAME           = "Lab 3 — Online store"
+PROJECT_NUMBER         = "0.1.1"
+OUTPUT_DIRECTORY       = "@CMAKE_CURRENT_BINARY_DIR@/docs"
+INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/README.md" \
+                         "@CMAKE_CURRENT_SOURCE_DIR@/docs" \
+                         "@CMAKE_CURRENT_SOURCE_DIR@/include" \
+                         "@CMAKE_CURRENT_SOURCE_DIR@/src" \
+                         "@CMAKE_CURRENT_SOURCE_DIR@/app" \
+                         "@CMAKE_CURRENT_SOURCE_DIR@/persistence"
+USE_MDFILE_AS_MAINPAGE  = "@CMAKE_CURRENT_SOURCE_DIR@/README.md"
+FILE_PATTERNS          = *.hpp *.cpp *.md
+RECURSIVE              = YES
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_AS_ERROR          = FAIL_ON_WARNINGS
+FULL_PATH_NAMES        = NO
+STRIP_FROM_PATH        = "@CMAKE_CURRENT_SOURCE_DIR@"
+HAVE_DOT               = NO

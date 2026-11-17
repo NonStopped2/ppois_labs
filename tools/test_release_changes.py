@@ -21,26 +21,31 @@ class ReleaseScopeTests(unittest.TestCase):
             ("lab2/src/core/Money.cpp", {"lab2"}),
             ("lab2/tools/package.py", {"lab2"}),
             (".github/workflows/lab2.yml", {"lab2"}),
+            ("lab3/src/catalog/Product.cpp", {"lab3"}),
+            ("lab3/README.md", {"lab3"}),
+            (".github/workflows/lab3.yml", {"lab3"}),
         ):
             with self.subTest(path=path):
                 self.assertEqual(release_changes.affected_labs([path]), expected)
 
-    def test_shared_build_and_release_infrastructure_affects_both(self):
+    def test_shared_build_and_release_infrastructure_affects_all_labs(self):
         for path in (*release_changes.SHARED_FILES, "cmake/dependencies.cmake",
                      ".github/actions/setup/action.yml", ".github/workflows/shared.yml"):
             with self.subTest(path=path):
-                self.assertEqual(release_changes.affected_labs([path]), {"lab1", "lab2"})
+                self.assertEqual(release_changes.affected_labs([path]), {"lab1", "lab2", "lab3"})
 
     def test_unrelated_changes_do_not_publish_either_lab(self):
         self.assertEqual(release_changes.affected_labs([
-            "README.md", "AGENTS.md", ".gitignore", "lab3/README.md", "lab4/main.cpp",
+            "README.md", "AGENTS.md", ".gitignore", "lab4/main.cpp",
         ]), set())
         self.assertEqual(release_changes.affected_labs([]), set())
 
     def test_tags_feature_pushes_prs_and_manual_runs_do_not_use_git(self):
         with patch.object(release_changes.subprocess, "run") as run:
             for event, ref in (("push", "refs/tags/lab1-v1.2.3"),
+                               ("push", "refs/tags/lab3-v0.1.0"),
                                ("push", "refs/heads/feature/lab2"),
+                               ("push", "refs/heads/feature/lab3"),
                                ("pull_request", "refs/pull/1/merge"),
                                ("workflow_dispatch", "refs/heads/main")):
                 self.assertEqual(release_changes.detect_changed_labs(event, ref, "", ""), set())
@@ -82,7 +87,20 @@ class ReleaseScopeTests(unittest.TestCase):
                             BEFORE_SHA=before, RELEASE_SHA=after, GITHUB_OUTPUT=str(output)):
                 with patch.object(release_changes, "detect_changed_labs", return_value={"lab2"}):
                     release_changes.main()
-            self.assertEqual(output.read_text(), "lab1=false\nlab2=true\n")
+            self.assertEqual(output.read_text(), "lab1=false\nlab2=true\nlab3=false\n")
+
+    def test_store_only_merge_does_not_republish_previous_labs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.git(root, "init", "-q", "--initial-branch=main")
+            before = self.commit_file(root, "README.md", "base")
+            self.git(root, "checkout", "-qb", "store")
+            self.commit_file(root, "lab3/src/catalog/Product.cpp", "store logic")
+            self.commit_file(root, ".github/workflows/lab3.yml", "store pipeline")
+            self.git(root, "checkout", "-q", "main")
+            self.git(root, "merge", "--no-ff", "store", "-m", "merge store")
+            after = self.git(root, "rev-parse", "HEAD")
+            self.assertEqual(self.detect(root, before, after), {"lab3"})
 
     def test_merge_and_squash_include_complete_topic_changes(self):
         for mode in ("--no-ff", "--squash"):
