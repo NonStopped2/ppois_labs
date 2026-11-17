@@ -1,0 +1,11 @@
+sort cocktail 4 -2 0 4 1
+sort strand 10 -3 1 10
+tasks strand
+demo
+degree 2
+arc-degree 1 2
+walk vertices
+walk arcs reverse
+walk incident 2
+walk adjacent 2 reverse
+quit
