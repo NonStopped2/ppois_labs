@@ -28,9 +28,9 @@ def shell_step(workflow, name):
 class ReleaseWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.workflows = sorted((ROOT / ".github/workflows").glob("lab[123].yml"))
-        if {path.stem for path in cls.workflows} != {"lab1", "lab2", "lab3"}:
-            raise AssertionError("Expected release workflows for lab1, lab2 and lab3")
+        cls.workflows = sorted((ROOT / ".github/workflows").glob("lab[1234].yml"))
+        if {path.stem for path in cls.workflows} != {"lab1", "lab2", "lab3", "lab4"}:
+            raise AssertionError("Expected release workflows for lab1 through lab4")
 
     def select_tag(self, workflow, ref, ref_name, sha=SHA):
         with tempfile.TemporaryDirectory() as directory:
@@ -177,6 +177,20 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn('gh release download "$RELEASE_TAG"', verify)
         self.assertIn("--verify-archive downloaded/ppois-lab3-linux-x86_64.tar.gz", verify)
         self.assertNotIn("download-artifact", verify)
+
+    def test_lab4_post_release_verifies_both_native_packages(self):
+        workflow = ROOT / ".github/workflows/lab4.yml"
+        release = workflow.read_text().split("\n  release:\n", 1)[1]
+        release, verify = release.split("\n  verify_published:\n", 1)
+        self.assertIn("pattern: lab4-release-*", release)
+        self.assertIn("    needs: [release]", verify)
+        self.assertIn("RELEASE_TAG: ${{ needs.release.outputs.tag }}", verify)
+        self.assertIn('gh release download "$RELEASE_TAG"', verify)
+        self.assertIn('--verify-archive "downloaded/ppois-lab4-$PLATFORM.tar.gz"', verify)
+        for target in ("linux-x86_64", "macos-arm64"):
+            self.assertIn(f"platform: {target}", verify)
+            self.assertIn(f"test -f ppois-lab4-{target}.tar.gz",
+                          shell_step(workflow, "Verify release assets"))
 
 
 if __name__ == "__main__":

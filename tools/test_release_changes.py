@@ -24,6 +24,9 @@ class ReleaseScopeTests(unittest.TestCase):
             ("lab3/src/catalog/Product.cpp", {"lab3"}),
             ("lab3/README.md", {"lab3"}),
             (".github/workflows/lab3.yml", {"lab3"}),
+            ("lab4/include/lab4/DirectedGraph.hpp", {"lab4"}),
+            ("lab4/README.md", {"lab4"}),
+            (".github/workflows/lab4.yml", {"lab4"}),
         ):
             with self.subTest(path=path):
                 self.assertEqual(release_changes.affected_labs([path]), expected)
@@ -32,11 +35,11 @@ class ReleaseScopeTests(unittest.TestCase):
         for path in (*release_changes.SHARED_FILES, "cmake/dependencies.cmake",
                      ".github/actions/setup/action.yml", ".github/workflows/shared.yml"):
             with self.subTest(path=path):
-                self.assertEqual(release_changes.affected_labs([path]), {"lab1", "lab2", "lab3"})
+                self.assertEqual(release_changes.affected_labs([path]), {"lab1", "lab2", "lab3", "lab4"})
 
     def test_unrelated_changes_do_not_publish_either_lab(self):
         self.assertEqual(release_changes.affected_labs([
-            "README.md", "AGENTS.md", ".gitignore", "lab4/main.cpp",
+            "README.md", "AGENTS.md", ".gitignore",
         ]), set())
         self.assertEqual(release_changes.affected_labs([]), set())
 
@@ -44,6 +47,7 @@ class ReleaseScopeTests(unittest.TestCase):
         with patch.object(release_changes.subprocess, "run") as run:
             for event, ref in (("push", "refs/tags/lab1-v1.2.3"),
                                ("push", "refs/tags/lab3-v0.1.0"),
+                               ("push", "refs/tags/lab4-v0.1.0"),
                                ("push", "refs/heads/feature/lab2"),
                                ("push", "refs/heads/feature/lab3"),
                                ("pull_request", "refs/pull/1/merge"),
@@ -87,7 +91,16 @@ class ReleaseScopeTests(unittest.TestCase):
                             BEFORE_SHA=before, RELEASE_SHA=after, GITHUB_OUTPUT=str(output)):
                 with patch.object(release_changes, "detect_changed_labs", return_value={"lab2"}):
                     release_changes.main()
-            self.assertEqual(output.read_text(), "lab1=false\nlab2=true\nlab3=false\n")
+            self.assertEqual(output.read_text(), "lab1=false\nlab2=true\nlab3=false\nlab4=false\n")
+
+    def test_lab4_commit_does_not_publish_previous_labs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.git(root, "init", "-q", "--initial-branch=main")
+            before = self.commit_file(root, "README.md", "base")
+            self.commit_file(root, "lab4/include/lab4/DirectedGraph.hpp", "graph")
+            after = self.commit_file(root, ".github/workflows/lab4.yml", "lab4 workflow")
+            self.assertEqual(self.detect(root, before, after), {"lab4"})
 
     def test_store_only_merge_does_not_republish_previous_labs(self):
         with tempfile.TemporaryDirectory() as directory:
